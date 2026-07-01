@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-hans" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#282828" id="theme-color-meta">
+    <title>图片库操作工具</title>
+    <meta name="description" content="图片库筛选与标记工具">
+    <script>
+        (function () {
+            const saved = localStorage.getItem('theme-preference');
+            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            let resolvedTheme;
+            let preference;
+
+            if (saved === 'dark' || saved === 'light' || saved === 'auto') {
+                preference = saved;
+            } else {
+                preference = 'auto';
+            }
+
+            if (preference === 'auto') {
+                resolvedTheme = systemDark ? 'dark' : 'light';
+            } else {
+                resolvedTheme = preference;
+            }
+
+            document.documentElement.setAttribute('data-theme', resolvedTheme);
+            document.documentElement.setAttribute('data-theme-preference', preference);
+
+            const meta = document.getElementById('theme-color-meta');
+            if (meta) {
+                meta.setAttribute('content', resolvedTheme === 'dark' ? '#282828' : '#fbf1c7');
+            }
+        })();
+    </script>
+    <style>
+        :root {
+            --font-family:
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                Roboto,
+                "Helvetica Neue",
+                "Noto Sans",
+                "Liberation Sans",
+                "Apple Color Emoji",
+                "Segoe UI Emoji",
+                "Segoe UI Symbol",
+                "Noto Color Emoji",
+                "Source Han Sans VF",
+                "Microsoft YaHei",
+                "PingFang SC",
+                "Hiragino Sans GB",
+                "WenQuanYi Micro Hei",
+                Arial,
+                sans-serif;
+
+            --font-family-monospace:
+                "JetBrains Mono",
+                "Liberation Mono",
+                "SF Mono",
+                Menlo,
+                Monaco,
+                Consolas,
+                "Source Han Sans VF",
+                "Microsoft YaHei",
+                "PingFang SC",
+                "Hiragino Sans GB",
+                monospace;
+
+            --transition-time: 0.2s;
+            --transition-time-slow: 0.3s;
+            --radius-sm: 2px;
+            --radius-md: 4px;
+            --breakpoint-sm: 576px;
+            --breakpoint-md: 768px;
+            --breakpoint-lg: 992px;
+            --breakpoint-xl: 1200px;
+
+            --color-primary: var(--green);
+            --color-secondary: var(--yellow);
+            --color-accent: var(--blue);
+            --color-success: var(--green);
+            --color-warning: var(--orange);
+            --color-error: var(--red);
+            --color-info: var(--blue);
+            --text-primary: var(--fg1);
+            --text-secondary: var(--fg-3);
+            --text-muted: var(--fg-4);
+            --text-inverse: var(--bg1);
+            --bg-body: var(--bg);
+            --bg-surface: var(--bg-s);
+            --bg-overlay: #0000007F;
+            --font-size-xs: 0.75rem;
+            --font-size-sm: 0.875rem;
+            --font-size-base: 1rem;
+            --font-size-md: 1.125rem;
+            --font-size-lg: 1.25rem;
+            --font-size-xl: 1.5rem;
+            font-size: 16px;
+        }
+
+        [data-theme="dark"] {
+            color-scheme: dark;
+            --bg_h: #1d2021;
+            --bg: #282828;
+            --bg_s: #32302f;
+            --bg1: #3c3836;
+            --bg2: #504945;
+            --bg3: #665c54;
+            --bg4: #7c6f64;
+            --fg: #fbf1c7;
+            --fg1: #ebdbb2;
+            --fg2: #d5c4a1;
+            --fg3: #bdae93;
+            --fg4: #a89984;
+            --red: #fb4934;
+            --green: #b8bb26;
+            --yellow: #fabd2f;
+            --blue: #83a598;
+            --purple: #d3869b;
+            --aqua: #8ec07c;
+            --gray: #928374;
+            --orange: #fe8019;
+            --red-dim: #cc2412;
+            --green-dim: #98971a;
+            --yellow-dim: #d79921;
+            --blue-dim: #458588;
+            --purple-dim: #b16286;
+            --aqua-dim: #689d6a;
+            --gray-dim: #a89984;
+            --orange-dim: #d65d0e;
+        }
+
+        [data-theme="light"] {
+            color-scheme: light;
+            --bg_h: #f9f5d7;
+            --bg: #fbf1c7;
+            --bg_s: #f2e5bc;
+            --bg1: #ebdbb2;
+            --bg2: #d5c4a1;
+            --bg3: #bdae93;
+            --bg4: #a89984;
+            --fg: #282828;
+            --fg1: #3c3836;
+            --fg2: #504945;
+            --fg3: #665c54;
+            --fg4: #7c6f64;
+            --red: #9d0006;
+            --green: #79740e;
+            --yellow: #b57614;
+            --blue: #076678;
+            --purple: #8f3f71;
+            --aqua: #427b58;
+            --orange: #af3a03;
+            --gray: #928374;
+            --red-dim: #cc2412;
+            --green-dim: #98971a;
+            --yellow-dim: #d79921;
+            --blue-dim: #458598;
+            --purple-dim: #b16286;
+            --aqua-dim: #689d6a;
+            --orange-dim: #d65d0e;
+            --gray-dim: #7c6f64;
+        }
+
+        a {
+            color: var(--blue);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--blue-dim);
+        }
+
+        a:visited {
+            color: var(--blue);
+        }
+
+        a:active {
+            color: var(--blue);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.5;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .app-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background-color: var(--bg_s);
+            border-bottom: 1px solid var(--bg2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .toolbar-spacer {
+            flex-grow: 1;
+        }
+
+        .btn-text {
+            font-family: inherit;
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            background: none;
+            border: none;
+            padding: 0.375rem 0.625rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: color var(--transition-time) ease;
+            line-height: 1;
+        }
+
+        .btn-text:hover {
+            color: var(--fg4);
+        }
+
+        .btn-text:active {
+            color: var(--fg3);
+        }
+
+        .btn-text.active {
+            color: var(--color-primary);
+        }
+
+        .btn-text:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+
+        .btn-outline {
+            font-family: inherit;
+            font-size: var(--font-size-sm);
+            color: var(--color-primary);
+            background: none;
+            border: 1px solid var(--color-primary);
+            padding: 0.375rem 0.75rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: background-color var(--transition-time) ease;
+            line-height: 1;
+        }
+
+        .btn-outline:hover {
+            background-color: var(--green-dim);
+            color: var(--text-inverse);
+        }
+
+        .btn-outline:active {
+            background-color: var(--color-primary);
+            color: var(--text-inverse);
+        }
+
+        .btn-outline:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+
+        .status-bar {
+            font-size: var(--font-size-sm);
+            color: var(--fg3);
+            min-width: 8rem;
+            text-align: right;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 0;
+            flex: 1;
+            align-content: start;
+        }
+
+        .item {
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            /* box-shadow: inset 0 0 0 2px red; */
+            outline: 3px solid transparent;
+            outline-offset: -3px;
+            transition: outline-color var(--transition-time) ease;
+            background-color: var(--bg1);
+            min-height: 120px;
+        }
+
+        .item img {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: contain;
+        }
+
+        .item.is-synthesized {
+            outline-color: var(--orange);
+        }
+
+        .item.marked-delete {
+            outline-color: var(--red);
+        }
+
+
+
+        .item-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 0.375rem;
+            opacity: 0;
+            transition: opacity var(--transition-time) ease;
+            background: var(--bg-overlay);
+            pointer-events: none;
+        }
+
+        .item:hover .item-overlay,
+        .item.active-overlay .item-overlay {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .overlay-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .frame-basename {
+            font-family: var(--font-family-monospace);
+            font-size: var(--font-size-xs);
+            color: var(--fg);
+            padding: 0.125rem 0.375rem;
+            border-radius: var(--radius-sm);
+            line-height: 1.4;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .overlay-bottom {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .overlay-btn {
+            font-family: inherit;
+            font-size: var(--font-size-lg);
+            color: var(--fg);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--radius-sm);
+            transition: color var(--transition-time) ease, background-color var(--transition-time) ease;
+            line-height: 1;
+            min-width: 2rem;
+            text-align: center;
+        }
+
+        .overlay-btn:hover {
+            color: var(--color-primary);
+            background-color: var(--bg2);
+        }
+
+        .overlay-btn.delete-btn:hover {
+            color: var(--red);
+        }
+
+        .overlay-btn:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+
+        body.quick-mark-mode .item {
+            cursor: crosshair;
+        }
+
+        body.quick-mark-mode .item-overlay {
+            display: none;
+        }
+
+        @media (max-width: 576px) {
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+            .app-toolbar {
+                padding: 0.375rem 0.5rem;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="app-toolbar" id="toolbar">
+        <div class="toolbar-group">
+            <button class="btn-text active" id="btn-all" onclick="filterView('all')">全部(<span id="count-all">0</span>)</button>
+            <button class="btn-text" id="btn-syn" onclick="filterView('synthesized')">合成(<span id="count-syn">0</span>)</button>
+            <button class="btn-text" id="btn-del" onclick="filterView('deleted')">删除(<span id="count-del">0</span>)</button>
+        </div>
+        <div class="toolbar-spacer"></div>
+        <div class="status-bar" id="status"></div>
+        <div class="toolbar-group">
+            <button class="btn-text" id="btn-quick" onclick="toggleQuickMark()">标记</button>
+            <button class="btn-outline" onclick="submitMarks()">提交</button>
+        </div>
+    </div>
+
+    <div class="gallery" id="gallery"></div>
+
+    <script>
+        let data = [];
+        let currentFilter = 'all';
+        let quickMarkMode = false;
+        let isPointerDown = false;
+        let lastHoveredId = null;
+        let statusTimer = null;
+
+        const galleryEl = document.getElementById('gallery');
+        const statusEl = document.getElementById('status');
+        const itemStates = new Map();
+
+        const filterBtnMap = {
+            all: 'btn-all',
+            synthesized: 'btn-syn',
+            deleted: 'btn-del'
+        };
+
+        async function init() {
+            showStatus('初始化中...');
+            try {
+                const res = await fetch('/cache/02_purified.json');
+                if (!res.ok) throw new Error('加载失败: ' + res.status);
+                data = await res.json();
+
+                data.forEach(item => {
+                    const repIndex = item.frames.indexOf(item.representative_frame);
+                    itemStates.set(item.cluster_id, {
+                        cluster_id: item.cluster_id,
+                        currentFrameIndex: repIndex >= 0 ? repIndex : 0,
+                        isDeleted: false,
+                        isPurified: true,
+                        frames: item.frames,
+                        representative_frame: item.representative_frame,
+                        is_synthesized: item.is_synthesized
+                    });
+                });
+
+                render();
+                updateCounts();
+                showStatus('初始化成功');
+            } catch (e) {
+                showStatus('初始化失败: ' + e.message);
+                console.error(e);
+            }
+        }
+
+        function getImageUrl(clusterId) {
+            const state = itemStates.get(clusterId);
+            const frame = state.frames[state.currentFrameIndex];
+            if (state.isPurified) {
+                return '/cache/purified/' + frame;
+            }
+            return '/cache/frames/' + frame;
+        }
+
+        function render() {
+            galleryEl.innerHTML = '';
+
+            const filtered = data.filter(item => {
+                const state = itemStates.get(item.cluster_id);
+                if (currentFilter === 'synthesized') return item.is_synthesized;
+                if (currentFilter === 'deleted') return state.isDeleted;
+                return true;
+            });
+
+            filtered.forEach(item => {
+                const state = itemStates.get(item.cluster_id);
+                const el = document.createElement('div');
+                el.className = 'item';
+                el.dataset.id = item.cluster_id;
+
+                if (item.is_synthesized) el.classList.add('is-synthesized');
+                if (state.isDeleted) el.classList.add('marked-delete');
+
+                const img = document.createElement('img');
+                img.src = getImageUrl(item.cluster_id);
+                img.alt = state.frames[state.currentFrameIndex];
+                img.loading = 'lazy';
+                img.draggable = false;
+                img.onerror = function() {
+                    this.style.minHeight = '120px';
+                    this.alt = '加载失败';
+                };
+
+                const overlay = document.createElement('div');
+                overlay.className = 'item-overlay';
+
+                const top = document.createElement('div');
+                top.className = 'overlay-top';
+
+                const basenameEl = document.createElement('span');
+                basenameEl.className = 'frame-basename';
+                const currentFrame = state.frames[state.currentFrameIndex];
+                basenameEl.textContent = currentFrame.replace(/\.[^.]+$/, '');
+                basenameEl.dataset.id = item.cluster_id;
+                top.appendChild(basenameEl);
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'overlay-btn delete-btn';
+                delBtn.textContent = '\u2715';
+                delBtn.title = '标记删除';
+                delBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    toggleDelete(item.cluster_id);
+                };
+                top.appendChild(delBtn);
+
+                const bottom = document.createElement('div');
+                bottom.className = 'overlay-bottom';
+
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'overlay-btn';
+                prevBtn.textContent = '\u2190';
+                prevBtn.title = '上一帧';
+                prevBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    cycleFrame(item.cluster_id, -1);
+                };
+
+                const resetBtn = document.createElement('button');
+                resetBtn.className = 'overlay-btn';
+                resetBtn.textContent = '\u2606';
+                resetBtn.title = '恢复代表帧';
+                resetBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    resetFrame(item.cluster_id);
+                };
+
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'overlay-btn';
+                nextBtn.textContent = '\u2192';
+                nextBtn.title = '下一帧';
+                nextBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    cycleFrame(item.cluster_id, 1);
+                };
+
+                bottom.appendChild(prevBtn);
+                bottom.appendChild(resetBtn);
+                bottom.appendChild(nextBtn);
+
+                overlay.appendChild(top);
+                overlay.appendChild(bottom);
+
+                el.appendChild(img);
+                el.appendChild(overlay);
+
+                el.addEventListener('click', function() {
+                    if (quickMarkMode) {
+                        toggleDelete(item.cluster_id);
+                    }
+                });
+
+                el.addEventListener('mouseenter', function() {
+                    if (quickMarkMode && isPointerDown) {
+                        if (lastHoveredId !== item.cluster_id) {
+                            lastHoveredId = item.cluster_id;
+                            toggleDelete(item.cluster_id);
+                        }
+                    }
+                });
+
+                galleryEl.appendChild(el);
+            });
+        }
+
+        function cycleFrame(clusterId, direction) {
+            const state = itemStates.get(clusterId);
+            state.currentFrameIndex += direction;
+            if (state.currentFrameIndex < 0) {
+                state.currentFrameIndex = state.frames.length - 1;
+            }
+            if (state.currentFrameIndex >= state.frames.length) {
+                state.currentFrameIndex = 0;
+            }
+            state.isPurified = false;
+
+            const itemEl = galleryEl.querySelector('[data-id="' + clusterId + '"]');
+            if (itemEl) {
+                const img = itemEl.querySelector('img');
+                img.src = getImageUrl(clusterId);
+                img.alt = state.frames[state.currentFrameIndex];
+                const basenameEl = itemEl.querySelector('.frame-basename');
+                if (basenameEl) {
+                    basenameEl.textContent = state.frames[state.currentFrameIndex].replace(/\.[^.]+$/, '');
+                }
+            }
+        }
+
+        function resetFrame(clusterId) {
+            const state = itemStates.get(clusterId);
+            const repIndex = state.frames.indexOf(state.representative_frame);
+            state.currentFrameIndex = repIndex >= 0 ? repIndex : 0;
+            state.isPurified = true;
+
+            const itemEl = galleryEl.querySelector('[data-id="' + clusterId + '"]');
+            if (itemEl) {
+                const img = itemEl.querySelector('img');
+                img.src = getImageUrl(clusterId);
+                img.alt = state.frames[state.currentFrameIndex];
+                const basenameEl = itemEl.querySelector('.frame-basename');
+                if (basenameEl) {
+                    basenameEl.textContent = state.frames[state.currentFrameIndex].replace(/\.[^.]+$/, '');
+                }
+            }
+        }
+
+        function toggleDelete(clusterId) {
+            const state = itemStates.get(clusterId);
+            state.isDeleted = !state.isDeleted;
+
+            const itemEl = galleryEl.querySelector('[data-id="' + clusterId + '"]');
+            if (itemEl) {
+                itemEl.classList.toggle('marked-delete', state.isDeleted);
+            }
+
+            updateCounts();
+            if (currentFilter === 'deleted') {
+                render();
+            }
+        }
+
+        function filterView(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.btn-text').forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            const btnId = filterBtnMap[filter];
+            if (btnId) {
+                document.getElementById(btnId).classList.add('active');
+            }
+            render();
+        }
+
+        function toggleQuickMark() {
+            quickMarkMode = !quickMarkMode;
+            document.body.classList.toggle('quick-mark-mode', quickMarkMode);
+            document.getElementById('btn-quick').classList.toggle('active', quickMarkMode);
+            showStatus(quickMarkMode ? '快速标记模式已开启' : '快速标记模式已关闭');
+        }
+
+        function updateCounts() {
+            const total = data.length;
+            const syn = data.filter(function(i) { return i.is_synthesized; }).length;
+            const del = Array.from(itemStates.values()).filter(function(s) { return s.isDeleted; }).length;
+
+            document.getElementById('count-all').textContent = total;
+            document.getElementById('count-syn').textContent = syn;
+            document.getElementById('count-del').textContent = del;
+        }
+
+        function showStatus(msg) {
+            statusEl.textContent = msg;
+            if (statusTimer) clearTimeout(statusTimer);
+            if (msg) {
+                statusTimer = setTimeout(function() {
+                    if (statusEl.textContent === msg) {
+                        statusEl.textContent = '';
+                    }
+                }, 5000);
+            }
+        }
+
+        async function submitMarks() {
+            const payload = [];
+            itemStates.forEach(function(state) {
+                payload.push({
+                    id: state.cluster_id,
+                    url: getImageUrl(state.cluster_id),
+                    del: state.isDeleted
+                });
+            });
+
+            showStatus('提交中...');
+            try {
+                const res = await fetch('/markframes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('提交失败: ' + res.status);
+                showStatus('提交成功');
+            } catch (e) {
+                showStatus('提交失败: ' + e.message);
+                console.error(e);
+            }
+        }
+
+        document.addEventListener('mousedown', function() {
+            isPointerDown = true;
+        });
+        document.addEventListener('mouseup', function() {
+            isPointerDown = false;
+            lastHoveredId = null;
+        });
+        document.addEventListener('touchstart', function() {
+            isPointerDown = true;
+        }, { passive: true });
+        document.addEventListener('touchend', function() {
+            isPointerDown = false;
+            lastHoveredId = null;
+        });
+        document.addEventListener('touchmove', function(e) {
+            if (!quickMarkMode || !isPointerDown) return;
+            const touch = e.touches[0];
+            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (el) {
+                const item = el.closest('.item');
+                if (item) {
+                    const id = parseInt(item.dataset.id, 10);
+                    if (lastHoveredId !== id) {
+                        lastHoveredId = id;
+                        toggleDelete(id);
+                    }
+                }
+            }
+        }, { passive: true });
+
+        init();
+    </script>
+</body>
+</html>

@@ -12,7 +12,7 @@ app.mount("/cache", StaticFiles(directory="cache"), name="cache")
 app.mount("/pages", StaticFiles(directory="pages"), name="pages")
 
 DATA_DIR = PathlibPath("data")
-SAMPLE_CACHE_DIR = PathlibPath("cache/sample")
+CACHE_DIR = PathlibPath("cache")
 
 def ensure_data_dir():
     DATA_DIR.mkdir(exist_ok=True)
@@ -20,8 +20,8 @@ def ensure_data_dir():
 @app.get("/sample")
 async def get_sample_list():
     sample_dict = {}
-    if SAMPLE_CACHE_DIR.exists() and SAMPLE_CACHE_DIR.is_dir():
-        for file_path in SAMPLE_CACHE_DIR.glob("*.png"):
+    if CACHE_DIR.exists() and CACHE_DIR.is_dir():
+        for file_path in CACHE_DIR.glob("sample/*.png"):
             name = file_path.stem
             sample_dict[name] = f"/cache/sample/{name}.png"
     return sample_dict
@@ -52,6 +52,18 @@ async def update_or_create_roi(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to write file: {str(e)}")
     return {"message": f"ROI data for '{name}' saved successfully", "file": str(file_path)}
+
+@app.post("/markframes")
+async def markframes( data: list = Body(..., description="markframes")):
+    ensure_data_dir()
+    file_path = CACHE_DIR / f"markframes.json"
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to write file: {str(e)}")
+    return {"message": f"Mark frames data saved successfully", "file": str(file_path)}
+
 
 @app.get("/")
 def root():
