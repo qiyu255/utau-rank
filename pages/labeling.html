@@ -1,0 +1,2548 @@
+<!DOCTYPE html>
+<html lang="zh-hans" data-theme="dark">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#282828" id="theme-color-meta">
+    <title>图像标注工具</title>
+    <meta name="description" content="图像标注工具">
+    <script>
+        (function () {
+            const saved = localStorage.getItem('theme-preference');
+            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            let resolvedTheme;
+            let preference;
+            if (saved === 'dark' || saved === 'light' || saved === 'auto') {
+                preference = saved;
+            } else {
+                preference = 'auto';
+            }
+            if (preference === 'auto') {
+                resolvedTheme = systemDark ? 'dark' : 'light';
+            } else {
+                resolvedTheme = preference;
+            }
+            document.documentElement.setAttribute('data-theme', resolvedTheme);
+            document.documentElement.setAttribute('data-theme-preference', preference);
+            const meta = document.getElementById('theme-color-meta');
+            if (meta) {
+                meta.setAttribute('content', resolvedTheme === 'dark' ? '#282828' : '#fbf1c7');
+            }
+        })();
+    </script>
+    <style>
+        :root {
+            --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Source Han Sans VF", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "WenQuanYi Micro Hei", Arial, sans-serif;
+            --font-family-monospace: "JetBrains Mono", "Liberation Mono", "SF Mono", Menlo, Monaco, Consolas, "Source Han Sans VF", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", monospace;
+            --transition-time: 0.2s;
+            --transition-time-slow: 0.3s;
+            --radius-sm: 2px;
+            --radius-md: 4px;
+            --breakpoint-sm: 576px;
+            --breakpoint-md: 768px;
+            --breakpoint-lg: 992px;
+            --breakpoint-xl: 1200px;
+            --color-primary: var(--green);
+            --color-secondary: var(--yellow);
+            --color-accent: var(--blue);
+            --color-success: var(--green);
+            --color-warning: var(--orange);
+            --color-error: var(--red);
+            --color-info: var(--blue);
+            --text-primary: var(--fg1);
+            --text-secondary: var(--fg-3);
+            --text-muted: var(--fg-4);
+            --text-inverse: var(--bg1);
+            --bg-body: var(--bg);
+            --bg-surface: var(--bg-s);
+            --bg-overlay: #0000007F;
+            --font-size-xs: 0.75rem;
+            --font-size-sm: 0.875rem;
+            --font-size-base: 1rem;
+            --font-size-md: 1.125rem;
+            --font-size-lg: 1.25rem;
+            --font-size-xl: 1.5rem;
+            font-size: 16px;
+        }
+
+        [data-theme="dark"] {
+            color-scheme: dark;
+            --bg_h: #1d2021;
+            --bg: #282828;
+            --bg_s: #32302f;
+            --bg1: #3c3836;
+            --bg2: #504945;
+            --bg3: #665c54;
+            --bg4: #7c6f64;
+            --fg: #fbf1c7;
+            --fg1: #ebdbb2;
+            --fg2: #d5c4a1;
+            --fg3: #bdae93;
+            --fg4: #a89984;
+            --red: #fb4934;
+            --green: #b8bb26;
+            --yellow: #fabd2f;
+            --blue: #83a598;
+            --purple: #d3869b;
+            --aqua: #8ec07c;
+            --gray: #928374;
+            --orange: #fe8019;
+            --red-dim: #cc2412;
+            --green-dim: #98971a;
+            --yellow-dim: #d79921;
+            --blue-dim: #458588;
+            --purple-dim: #b16286;
+            --aqua-dim: #689d6a;
+            --gray-dim: #a89984;
+            --orange-dim: #d65d0e;
+        }
+
+        [data-theme="light"] {
+            color-scheme: light;
+            --bg_h: #f9f5d7;
+            --bg: #fbf1c7;
+            --bg_s: #f2e5bc;
+            --bg1: #ebdbb2;
+            --bg2: #d5c4a1;
+            --bg3: #bdae93;
+            --bg4: #a89984;
+            --fg: #282828;
+            --fg1: #3c3836;
+            --fg2: #504945;
+            --fg3: #665c54;
+            --fg4: #7c6f64;
+            --red: #9d0006;
+            --green: #79740e;
+            --yellow: #b57614;
+            --blue: #076678;
+            --purple: #8f3f71;
+            --aqua: #427b58;
+            --orange: #af3a03;
+            --gray: #928374;
+            --red-dim: #cc2412;
+            --green-dim: #98971a;
+            --yellow-dim: #d79921;
+            --blue-dim: #458598;
+            --purple-dim: #b16286;
+            --aqua-dim: #427b58;
+            --orange-dim: #d65d0e;
+            --gray-dim: #7c6f64;
+        }
+
+        a {
+            color: var(--blue);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--blue-dim);
+        }
+
+        a:visited {
+            color: var(--blue);
+        }
+
+        a:active {
+            color: var(--blue);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-body);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .menu-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--bg3);
+            flex-shrink: 0;
+            flex-wrap: wrap;
+            min-height: 2.25rem;
+        }
+
+        .menu-bar select {
+            font-size: var(--font-size-sm);
+            padding: 0.2rem 0.4rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--bg4);
+            background: var(--bg);
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color var(--transition-time);
+            font-family: var(--font-family);
+            max-width: 160px;
+        }
+
+        .menu-bar select:focus {
+            border-color: var(--color-primary);
+        }
+
+        .menu-bar .tool-group {
+            display: flex;
+            align-items: center;
+            gap: 0.15rem;
+        }
+
+        .btn-text {
+            font-size: var(--font-size-sm);
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--radius-sm);
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-family: var(--font-family);
+            transition: color var(--transition-time);
+            white-space: nowrap;
+        }
+
+        .btn-text:hover {
+            color: var(--text-secondary);
+        }
+
+        .btn-text:active {
+            color: var(--text-muted);
+        }
+
+        .btn-text.active {
+            color: var(--color-primary);
+        }
+
+        .btn-outline {
+            font-size: var(--font-size-sm);
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--color-primary);
+            background: transparent;
+            color: var(--color-primary);
+            cursor: pointer;
+            font-family: var(--font-family);
+            transition: background-color var(--transition-time);
+            white-space: nowrap;
+        }
+
+        .btn-outline:hover {
+            background: var(--bg1);
+        }
+
+        .btn-outline:active {
+            background: var(--bg2);
+        }
+
+        .btn-outline.active {
+            background: var(--color-primary);
+            color: var(--text-inverse);
+        }
+
+        .status-bar {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            padding: 0.15rem 0.5rem;
+            background: var(--bg-surface);
+            border-top: 1px solid var(--bg3);
+            flex-shrink: 0;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            min-height: 1.4rem;
+            align-items: center;
+        }
+
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .left-panel {
+            width: 240px;
+            flex-shrink: 0;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--bg3);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 0.5rem;
+            gap: 0.5rem;
+        }
+
+        .right-panel {
+            width: 240px;
+            flex-shrink: 0;
+            background: var(--bg-surface);
+            border-left: 1px solid var(--bg3);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 0.5rem;
+            gap: 0.5rem;
+        }
+
+        .work-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: var(--bg);
+            cursor: crosshair;
+            min-width: 0;
+        }
+
+        .work-area canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .panel-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .panel-section label {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .panel-section input[type="text"],
+        .panel-section input[type="number"] {
+            font-size: var(--font-size-sm);
+            padding: 0.3rem 0.4rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--bg4);
+            background: var(--bg);
+            color: var(--text-primary);
+            outline: none;
+            font-family: var(--font-family);
+            transition: border-color var(--transition-time);
+            width: 100%;
+        }
+
+        .panel-section input:focus {
+            border-color: var(--color-primary);
+        }
+
+        .annotation-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .annotation-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.35rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            border: 1px solid transparent;
+            transition: border-color var(--transition-time), background-color var(--transition-time);
+            min-height: 1.8rem;
+        }
+
+        .annotation-item:hover {
+            background: var(--bg1);
+        }
+
+        .annotation-item.selected {
+            border-color: var(--color-primary);
+            background: var(--bg1);
+        }
+
+        .annotation-item .color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            flex-shrink: 0;
+            border: 1px solid var(--bg4);
+        }
+
+        .annotation-item .anno-name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .annotation-item .toggle-btn {
+            font-size: var(--font-size-xs);
+            padding: 0.1rem 0.3rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--bg4);
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-family: var(--font-family);
+            transition: all var(--transition-time);
+            min-width: 1.4rem;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .annotation-item .toggle-btn.locked {
+            color: var(--color-warning);
+            border-color: var(--color-warning);
+        }
+
+        .annotation-item .toggle-btn.visible {
+            color: var(--color-primary);
+            border-color: var(--color-primary);
+        }
+
+        .batch-bar {
+            display: flex;
+            gap: 0.2rem;
+            flex-wrap: wrap;
+        }
+
+        .batch-bar .btn-text {
+            font-size: var(--font-size-xs);
+            padding: 0.15rem 0.35rem;
+        }
+
+        .color-palette {
+            display: flex;
+            gap: 3px;
+            flex-wrap: wrap;
+        }
+
+        .color-swatch {
+            width: 22px;
+            height: 22px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color var(--transition-time);
+            flex-shrink: 0;
+        }
+
+        .color-swatch:hover {
+            border-color: var(--text-primary);
+        }
+
+        .color-swatch.selected {
+            border-color: var(--color-primary);
+            outline: 1px solid var(--color-primary);
+            outline-offset: 1px;
+        }
+
+        .nudge-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            align-items: center;
+        }
+/*
+        .nudge-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 3px;
+        }
+
+         .nudge-grid button {
+            font-size: var(--font-size-sm);
+            padding: 0.35rem 0.5rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--bg4);
+            background: var(--bg);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-family: var(--font-family);
+            transition: background-color var(--transition-time);
+            min-width: 2rem;
+            text-align: center;
+        }
+
+        .nudge-grid button:hover {
+            background: var(--bg1);
+        }
+
+        .nudge-grid button:active {
+            background: var(--bg2);
+        } */
+
+        .nudge-size-row {
+            display: flex;
+            gap: 3px;
+            margin-top: 0.3rem;
+            justify-content: center;
+        }
+
+        .nudge-size-row button {
+            font-size: var(--font-size-xs);
+            padding: 0.2rem 0.4rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--bg4);
+            background: var(--bg);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-family: var(--font-family);
+            transition: background-color var(--transition-time);
+            width: 2rem;
+            text-align: center;
+        }
+
+        .nudge-size-row button:hover {
+            background: var(--bg1);
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 3.5rem;
+            right: 1rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: var(--bg1);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--bg4);
+            font-size: var(--font-size-sm);
+            animation: fadeIn 0.2s ease;
+            pointer-events: auto;
+            max-width: 280px;
+            word-break: break-word;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .left-panel {
+                width: 180px;
+                font-size: var(--font-size-xs);
+            }
+
+            .right-panel {
+                width: 180px;
+                font-size: var(--font-size-xs);
+            }
+        }
+
+        @media (max-width: 700px) {
+            .left-panel {
+                width: 140px;
+            }
+
+            .right-panel {
+                width: 140px;
+            }
+
+            .btn-text,
+            .btn-outline {
+                font-size: var(--font-size-xs);
+                padding: 0.2rem 0.35rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="toast-container" id="toast-container"></div>
+
+    <div class="menu-bar">
+        <select id="sample-select">
+            <option value="">-- 加载中 --</option>
+        </select>
+        <span style="width:1px;background:var(--bg4);align-self:stretch;margin:0 0.2rem;"></span>
+        <div class="tool-group">
+            <button class="btn-text active" id="tool-smart" title="智能 (B)">智能</button>
+            <button class="btn-text" id="tool-select" title="选择 (V)">选择</button>
+            <button class="btn-text" id="tool-draw" title="绘制 (D)">绘制</button>
+        </div>
+        <span style="width:1px;background:var(--bg4);align-self:stretch;margin:0 0.2rem;"></span>
+        <div class="tool-group">
+            <button class="btn-text active" id="display-both" title="边框+蒙版">双显</button>
+            <button class="btn-text" id="display-border" title="仅边框">边框</button>
+            <button class="btn-text" id="display-mask" title="仅蒙版">蒙版</button>
+        </div>
+        <span style="width:1px;background:var(--bg4);align-self:stretch;margin:0 0.2rem;"></span>
+        <div class="tool-group">
+            <button class="btn-text active" id="mode-click" title="点击-点击模式">点绘</button>
+            <button class="btn-text" id="mode-drag" title="拖拽模式">拖绘</button>
+        </div>
+        <span style="width:1px;background:var(--bg4);align-self:stretch;margin:0 0.2rem;"></span>
+        <div class="tool-group">
+            <button class="btn-text" id="btn-fit" title="适应窗口">适应</button>
+            <button class="btn-text" id="btn-zoom-in" title="放大 (+)">放大</button>
+            <button class="btn-text" id="btn-zoom-out" title="缩小 (-)">缩小</button>
+        </div>
+        <span style="width:1px;background:var(--bg4);align-self:stretch;margin:0 0.2rem;"></span>
+        <div class="tool-group">
+            <button class="btn-text" id="btn-undo" title="撤销 (Ctrl+Z)">撤销</button>
+            <button class="btn-text" id="btn-redo" title="重做 (Ctrl+Shift+Z)">重做</button>
+        </div>
+        <span style="flex-grow: 1;"></span>
+        <div class="tool-group">
+            <button class="btn-outline" id="btn-save" style="margin-left:auto;" title="保存 (Ctrl+S)">保存</button>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <div class="left-panel">
+            <div class="panel-section">
+                <label>ROI 名称</label>
+                <input type="text" id="roi-name" placeholder="ROI名称">
+            </div>
+            <div class="panel-section">
+                <label>参考宽度和高度</label>
+                <div id="ref-dimensions" style="display:flex;gap:0.3rem;">
+                    <input type="number" id="ref-width" placeholder="参考宽度" min="1" step="1">
+                    <input type="number" id="ref-height" placeholder="参考高度" min="1" step="1">
+                </div>
+
+            </div>
+            <div class="panel-section">
+                <div class="batch-bar">
+                    <button class="btn-text" id="batch-select-all" style="font-size:var(--font-size-xs);">全</button>
+                    <button class="btn-text" id="batch-deselect-all" style="font-size:var(--font-size-xs);">取</button>
+                    <button class="btn-text" id="batch-delete"
+                        style="font-size:var(--font-size-xs);color:var(--color-error);">删</button>
+                    <button class="btn-text" id="batch-duplicate"
+                        style="font-size:var(--font-size-xs);color:var(--color-primary);">复</button>
+                    <button class="btn-text" id="batch-toggle-lock" style="font-size:var(--font-size-xs);">锁</button>
+                    <button class="btn-text" id="batch-toggle-vis" style="font-size:var(--font-size-xs);">显</button>
+                </div>
+                <div class="annotation-list" id="annotation-list"></div>
+            </div>
+        </div>
+        <div class="work-area" id="work-area">
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="right-panel">
+            <div class="panel-section" id="anno-props-section">
+                <label>标注属性</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem;">
+                    <div><label style="font-size:var(--font-size-xs);color:var(--text-muted);">X</label><input
+                            type="number" id="prop-x" step="1"></div>
+                    <div><label style="font-size:var(--font-size-xs);color:var(--text-muted);">Y</label><input
+                            type="number" id="prop-y" step="1"></div>
+                    <div><label style="font-size:var(--font-size-xs);color:var(--text-muted);">W</label><input
+                            type="number" id="prop-w" step="1" min="1"></div>
+                    <div><label style="font-size:var(--font-size-xs);color:var(--text-muted);">H</label><input
+                            type="number" id="prop-h" step="1" min="1"></div>
+                </div>
+                <label style="font-size:var(--font-size-xs);color:var(--text-muted);">名称</label>
+                <input type="text" id="prop-name" placeholder="标注名称">
+                <label style="font-size:var(--font-size-xs);color:var(--text-muted);">颜色</label>
+                <div class="color-palette" id="color-palette"></div>
+            </div>
+            <div style="margin-top: 8px;"></div>
+            <div class="panel-section">
+                <label>微调面板</label>
+                <div style="display:flex;gap:0.3rem;align-items:center;">
+                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);">步长:</label>
+                    <input type="number" id="nudge-step" value="1" min="1" step="1" style="width:60px;">
+                </div>
+                <div class="nudge-size-row">
+                    <button id="nudge-up">↑</button>
+                    <button id="nudge-left">←</button>
+                    <button id="nudge-right">→</button>
+                    <button id="nudge-down">↓</button>
+                </div>
+                <div class="nudge-size-row">
+                    <button id="nudge-w-plus" title="增加宽度">W+</button>
+                    <button id="nudge-w-minus" title="减少宽度">W-</button>
+                    <button id="nudge-h-plus" title="增加高度">H+</button>
+                    <button id="nudge-h-minus" title="减少高度">H-</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span id="status-tool">工具: 智能</span>
+        <span id="status-zoom">缩放: 100%</span>
+        <span id="status-anno-count">标注: 0</span>
+        <span id="status-selected">选中: 0</span>
+        <span style="flex-grow: 1;"></span>
+        <span id="status-pos">--</span>
+    </div>
+
+    <script>
+        (function () {
+            // ---------- 常量与变量 ----------
+            const SNAP_THRESHOLD = 8;
+            const MIN_ZOOM = 0.05;
+            const MAX_ZOOM = 20;
+            const HANDLE_SIZE = 8;
+            const PRESET_COLORS = [
+                'var(--red)', 'var(--green)', 'var(--blue)', 'var(--yellow)',
+                'var(--purple)', 'var(--aqua)', 'var(--orange)', 'var(--gray)',
+                'var(--red-dim)', 'var(--green-dim)', 'var(--blue-dim)', 'var(--yellow-dim)',
+                'var(--purple-dim)', 'var(--aqua-dim)', 'var(--orange-dim)', 'var(--fg1)'
+            ];
+            const PRESET_COLOR_NAMES = [
+                'red', 'green', 'blue', 'yellow', 'purple', 'aqua', 'orange', 'gray',
+                'red-dim', 'green-dim', 'blue-dim', 'yellow-dim', 'purple-dim', 'aqua-dim',
+                'orange-dim', 'fg1'
+            ];
+
+            const workArea = document.getElementById('work-area');
+            const canvas = document.getElementById('main-canvas');
+            const ctx = canvas.getContext('2d');
+            const sampleSelect = document.getElementById('sample-select');
+            const roiNameInput = document.getElementById('roi-name');
+            const refWidthInput = document.getElementById('ref-width');
+            const refHeightInput = document.getElementById('ref-height');
+            const annotationListEl = document.getElementById('annotation-list');
+            const colorPaletteEl = document.getElementById('color-palette');
+
+            let samples = [];
+            let currentSampleName = '';
+            let imageObj = null;
+            let imageNaturalW = 0;
+            let imageNaturalH = 0;
+            let annotations = [];
+            let nextId = 1;
+            let selectedIds = new Set();
+            let currentTool = 'smart';
+            let drawMode = 0;
+            let displayStyle = 'both';
+            let scale = 1;
+            let offsetX = 0;
+            let offsetY = 0;
+            let isDrawing = false;
+            let drawStartX = 0;
+            let drawStartY = 0;
+            let drawCurrentX = 0;
+            let drawCurrentY = 0;
+            let drawPhaseOne = false;
+            let isPanning = false;
+            let panStartX = 0;
+            let panStartY = 0;
+            let panStartOffX = 0;
+            let panStartOffY = 0;
+            let isDraggingAnno = false;
+            let dragAnnoId = null;
+            let dragStartAnno = null;
+            let dragStartMouseImg = null;
+            let isResizing = false;
+            let resizeAnnoId = null;
+            let resizeHandle = '';
+            let resizeStartAnno = null;
+            let resizeStartMouseImg = null;
+            let isMarqueeSelecting = false;
+            let marqueeStartX = 0;
+            let marqueeStartY = 0;
+            let marqueeCurrentX = 0;
+            let marqueeCurrentY = 0;
+            let spaceHeld = false;
+            let hoveredAnnoId = null;
+            let hoveredHandle = '';
+            let lastMouseScreenX = 0;
+            let lastMouseScreenY = 0;
+            let touchCache = new Map();
+            // 标记当前是否处于 Alt 拖动复制模式
+            let isAltDragCopy = false;
+
+            // ---------- Undo / Redo 栈 ----------
+            let undoStack = [];
+            let redoStack = [];
+
+            // ---------- 工具函数 ----------
+            function showToast(message, duration = 2000) {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.textContent = message;
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transition = 'opacity 0.2s ease';
+                    setTimeout(() => toast.remove(), 200);
+                }, duration);
+            }
+
+            function getThemeColorVar(varName) {
+                const el = document.documentElement;
+                const style = getComputedStyle(el);
+                return style.getPropertyValue(varName).trim();
+            }
+
+            function getPresetColorValue(index) {
+                const varName = PRESET_COLOR_NAMES[index];
+                return getThemeColorVar('--' + varName);
+            }
+
+            function getStateSnapshot() {
+                return {
+                    annotations: annotations.map(a => ({ ...a })),
+                    nextId: nextId,
+                    selectedIds: new Set(selectedIds)
+                };
+            }
+
+            function restoreStateSnapshot(snapshot) {
+                annotations = snapshot.annotations.map(a => ({ ...a }));
+                nextId = snapshot.nextId;
+                selectedIds = new Set(snapshot.selectedIds);
+                updateAnnotationList();
+                updatePropsPanel();
+                render();
+                updateStatusBar();
+            }
+
+            function pushUndo() {
+                const snapshot = getStateSnapshot();
+                undoStack.push(snapshot);
+                redoStack = [];
+                if (undoStack.length > 100) undoStack.shift();
+            }
+
+            function undo() {
+                if (undoStack.length === 0) {
+                    showToast('没有可撤销的操作');
+                    return;
+                }
+                const current = getStateSnapshot();
+                const prev = undoStack.pop();
+                redoStack.push(current);
+                restoreStateSnapshot(prev);
+                showToast('撤销');
+            }
+
+            function redo() {
+                if (redoStack.length === 0) {
+                    showToast('没有可重做的操作');
+                    return;
+                }
+                const current = getStateSnapshot();
+                const next = redoStack.pop();
+                undoStack.push(current);
+                restoreStateSnapshot(next);
+                showToast('重做');
+            }
+
+            // ---------- 新增：复制标注（核心函数） ----------
+            // 复制指定的标注 ID 列表，返回 Map<原始ID, 新ID>
+            function duplicateAnnotations(ids, offset = 10) {
+                if (!ids || ids.size === 0) return new Map();
+                const toCopy = annotations.filter(a => ids.has(a.id));
+                if (toCopy.length === 0) return new Map();
+                const idMap = new Map();
+                for (const a of toCopy) {
+                    const newAnno = {
+                        id: nextId++,
+                        name: a.name ? (a.name + '_copy') : '',
+                        x: a.x + offset,
+                        y: a.y + offset,
+                        w: a.w,
+                        h: a.h,
+                        color: a.color,
+                        locked: false,
+                        visible: true
+                    };
+                    annotations.push(newAnno);
+                    idMap.set(a.id, newAnno.id);
+                }
+                pushUndo();
+                updateAnnotationList();
+                render();
+                return idMap;
+            }
+
+            // ---------- 批量复制（供按钮调用） ----------
+            function batchDuplicateSelected() {
+                if (selectedIds.size === 0) {
+                    showToast('请先选中要复制的标注');
+                    return;
+                }
+                // 计算偏移量：使用所有选中标注的平均位置偏移，使副本偏移方向一致
+                const idMap = duplicateAnnotations(selectedIds, 12);
+                if (idMap.size === 0) {
+                    showToast('复制失败');
+                    return;
+                }
+                // 选中新复制的标注
+                selectedIds.clear();
+                idMap.forEach(newId => selectedIds.add(newId));
+                updateAnnotationList();
+                updatePropsPanel();
+                render();
+                showToast('已复制 ' + idMap.size + ' 个标注');
+            }
+
+            function buildColorPalette() {
+                colorPaletteEl.innerHTML = '';
+                PRESET_COLOR_NAMES.forEach((name, i) => {
+                    const swatch = document.createElement('div');
+                    swatch.className = 'color-swatch';
+                    swatch.style.backgroundColor = getPresetColorValue(i);
+                    swatch.dataset.index = i;
+                    swatch.title = name;
+                    swatch.addEventListener('click', () => {
+                        const sel = getSingleSelectedAnnotation();
+                        if (sel) {
+                            pushUndo();
+                            sel.color = i;
+                            updateAnnotationList();
+                            updatePropsPanel();
+                            render();
+                        }
+                    });
+                    colorPaletteEl.appendChild(swatch);
+                });
+            }
+
+            function updateColorPaletteSelection() {
+                const sel = getSingleSelectedAnnotation();
+                const swatches = colorPaletteEl.querySelectorAll('.color-swatch');
+                swatches.forEach(s => s.classList.remove('selected'));
+                if (sel) {
+                    const idx = sel.color;
+                    if (idx >= 0 && idx < swatches.length) {
+                        swatches[idx].classList.add('selected');
+                    }
+                }
+            }
+
+            function resizeCanvas() {
+                const rect = workArea.getBoundingClientRect();
+                const w = rect.width;
+                const h = rect.height;
+                if (canvas.width !== w || canvas.height !== h) {
+                    canvas.width = w;
+                    canvas.height = h;
+                    render();
+                }
+            }
+
+            function screenToImage(sx, sy) {
+                return { x: (sx - offsetX) / scale, y: (sy - offsetY) / scale };
+            }
+
+            function imageToScreen(ix, iy) {
+                return { x: ix * scale + offsetX, y: iy * scale + offsetY };
+            }
+
+            function clampToImage(ix, iy, iw, ih) {
+                if (!imageObj) return { x: ix, y: iy, w: iw, h: ih };
+                let x = ix;
+                let y = iy;
+                let w = iw;
+                let h = ih;
+                if (x < 0) {
+                    w += x;
+                    x = 0;
+                }
+                if (y < 0) {
+                    h += y;
+                    y = 0;
+                }
+                if (x + w > imageNaturalW) w = imageNaturalW - x;
+                if (y + h > imageNaturalH) h = imageNaturalH - y;
+                if (w < 1) w = 1;
+                if (h < 1) h = 1;
+                return { x, y, w, h };
+            }
+
+            function clampPositionKeepSize(x, y, w, h) {
+                if (!imageObj) return { x, y };
+                let nx = Math.max(0, Math.min(x, imageNaturalW - w));
+                let ny = Math.max(0, Math.min(y, imageNaturalH - h));
+                if (w > imageNaturalW) nx = 0;
+                if (h > imageNaturalH) ny = 0;
+                return { x: nx, y: ny };
+            }
+
+            function findAnnotationAtImg(ix, iy) {
+                for (let i = annotations.length - 1; i >= 0; i--) {
+                    const a = annotations[i];
+                    if (!a.visible) continue;
+                    if (ix >= a.x && ix <= a.x + a.w && iy >= a.y && iy <= a.y + a.h) {
+                        return a;
+                    }
+                }
+                return null;
+            }
+
+            function findHandleAtImg(anno, ix, iy) {
+                const handleSizeImg = HANDLE_SIZE / scale;
+                const hw = handleSizeImg / 2;
+                const handles = [
+                    { name: 'nw', x: anno.x, y: anno.y },
+                    { name: 'n', x: anno.x + anno.w / 2, y: anno.y },
+                    { name: 'ne', x: anno.x + anno.w, y: anno.y },
+                    { name: 'w', x: anno.x, y: anno.y + anno.h / 2 },
+                    { name: 'e', x: anno.x + anno.w, y: anno.y + anno.h / 2 },
+                    { name: 'sw', x: anno.x, y: anno.y + anno.h },
+                    { name: 's', x: anno.x + anno.w / 2, y: anno.y + anno.h },
+                    { name: 'se', x: anno.x + anno.w, y: anno.y + anno.h },
+                ];
+                for (const h of handles) {
+                    if (ix >= h.x - hw && ix <= h.x + hw && iy >= h.y - hw && iy <= h.y + hw) {
+                        return h.name;
+                    }
+                }
+                return '';
+            }
+
+            function getSnapTargets(excludeId) {
+                const targets = [];
+                if (imageObj) {
+                    targets.push({ x: 0, y: 0, w: imageNaturalW, h: imageNaturalH, isBoundary: true });
+                }
+                for (const a of annotations) {
+                    if (a.id === excludeId || !a.visible) continue;
+                    targets.push({ x: a.x, y: a.y, w: a.w, h: a.h, isBoundary: false });
+                }
+                return targets;
+            }
+
+            function snapPosition(ix, iy, excludeId) {
+                if (!imageObj) return { x: ix, y: iy };
+                const targets = getSnapTargets(excludeId);
+                const thresholdImg = SNAP_THRESHOLD / scale;
+                let bestX = ix;
+                let bestY = iy;
+                let minDistX = thresholdImg + 1;
+                let minDistY = thresholdImg + 1;
+                for (const t of targets) {
+                    const pointsX = [t.x, t.x + t.w];
+                    const pointsY = [t.y, t.y + t.h];
+                    for (const px of pointsX) {
+                        const dist = Math.abs(ix - px);
+                        if (dist < minDistX) {
+                            minDistX = dist;
+                            bestX = px;
+                        }
+                    }
+                    for (const py of pointsY) {
+                        const dist = Math.abs(iy - py);
+                        if (dist < minDistY) {
+                            minDistY = dist;
+                            bestY = py;
+                        }
+                    }
+                }
+                return { x: (minDistX <= thresholdImg) ? bestX : ix, y: (minDistY <= thresholdImg) ? bestY : iy };
+            }
+
+            function snapRect(rect, excludeId) {
+                const targets = getSnapTargets(excludeId);
+                const thresholdImg = SNAP_THRESHOLD / scale;
+                const snapPointsX = [];
+                const snapPointsY = [];
+                for (const t of targets) {
+                    snapPointsX.push(t.x, t.x + t.w);
+                    snapPointsY.push(t.y, t.y + t.h);
+                }
+                const left = snapValue(rect.x, snapPointsX, thresholdImg);
+                const right = snapValue(rect.x + rect.w, snapPointsX, thresholdImg);
+                const top = snapValue(rect.y, snapPointsY, thresholdImg);
+                const bottom = snapValue(rect.y + rect.h, snapPointsY, thresholdImg);
+                const snappedLeft = left;
+                const snappedTop = top;
+                const snappedW = Math.max(1, right - left);
+                const snappedH = Math.max(1, bottom - top);
+                if (Math.abs(snappedLeft - rect.x) <= thresholdImg && Math.abs(snappedTop - rect.y) <= thresholdImg &&
+                    Math.abs(snappedW - rect.w) <= thresholdImg * 2 && Math.abs(snappedH - rect.h) <= thresholdImg * 2) {
+                    return { x: snappedLeft, y: snappedTop, w: snappedW, h: snappedH, snapped: true };
+                }
+                let result = { x: rect.x, y: rect.y, w: rect.w, h: rect.h, snapped: false };
+                const snapLX = Math.abs(left - rect.x) <= thresholdImg;
+                const snapRX = Math.abs(right - (rect.x + rect.w)) <= thresholdImg;
+                const snapTY = Math.abs(top - rect.y) <= thresholdImg;
+                const snapBY = Math.abs(bottom - (rect.y + rect.h)) <= thresholdImg;
+                if (snapLX) {
+                    result.x = left;
+                    result.w = rect.x + rect.w - left;
+                }
+                if (snapRX) { result.w = right - result.x; }
+                if (snapTY) {
+                    result.y = top;
+                    result.h = rect.y + rect.h - top;
+                }
+                if (snapBY) { result.h = bottom - result.y; }
+                if (snapLX || snapRX || snapTY || snapBY) result.snapped = true;
+                if (result.w < 1) result.w = 1;
+                if (result.h < 1) result.h = 1;
+                return result;
+            }
+
+            function snapValue(val, snapPoints, threshold) {
+                let best = val;
+                let bestDist = threshold + 1;
+                for (const sp of snapPoints) {
+                    const dist = Math.abs(val - sp);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        best = sp;
+                    }
+                }
+                return best;
+            }
+
+            function getSingleSelectedAnnotation() {
+                if (selectedIds.size === 1) {
+                    const id = selectedIds.values().next().value;
+                    return annotations.find(a => a.id === id) || null;
+                }
+                return null;
+            }
+
+            function getSelectedAnnotations() {
+                return annotations.filter(a => selectedIds.has(a.id));
+            }
+
+            function updateAnnotationList() {
+                annotationListEl.innerHTML = '';
+                annotations.forEach(a => {
+                    const item = document.createElement('div');
+                    item.className = 'annotation-item';
+                    if (selectedIds.has(a.id)) item.classList.add('selected');
+                    const dot = document.createElement('span');
+                    dot.className = 'color-dot';
+                    dot.style.backgroundColor = getPresetColorValue(a.color);
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'anno-name';
+                    nameSpan.textContent = a.name || ('#' + a.id);
+                    const lockBtn = document.createElement('button');
+                    lockBtn.className = 'toggle-btn' + (a.locked ? ' locked' : '');
+                    lockBtn.textContent = 'L';
+                    lockBtn.title = a.locked ? '已锁定' : '未锁定';
+                    lockBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        pushUndo();
+                        a.locked = !a.locked;
+                        if (a.locked) selectedIds.delete(a.id);
+                        updateAnnotationList();
+                        updatePropsPanel();
+                        render();
+                    });
+                    const visBtn = document.createElement('button');
+                    visBtn.className = 'toggle-btn' + (a.visible ? ' visible' : '');
+                    visBtn.textContent = 'V';
+                    visBtn.title = a.visible ? '可见' : '隐藏';
+                    visBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        pushUndo();
+                        a.visible = !a.visible;
+                        if (!a.visible) selectedIds.delete(a.id);
+                        updateAnnotationList();
+                        updatePropsPanel();
+                        render();
+                    });
+                    item.appendChild(dot);
+                    item.appendChild(nameSpan);
+                    item.appendChild(lockBtn);
+                    item.appendChild(visBtn);
+                    item.addEventListener('click', (e) => {
+                        if (a.locked) return;
+                        pushUndo();
+                        if (e.shiftKey) {
+                            if (selectedIds.has(a.id)) {
+                                selectedIds.delete(a.id);
+                            } else {
+                                selectedIds.add(a.id);
+                            }
+                        } else {
+                            selectedIds.clear();
+                            selectedIds.add(a.id);
+                        }
+                        updateAnnotationList();
+                        updatePropsPanel();
+                        render();
+                    });
+                    annotationListEl.appendChild(item);
+                });
+                updateColorPaletteSelection();
+                updateStatusBar();
+            }
+
+            function updatePropsPanel() {
+                const sel = getSingleSelectedAnnotation();
+                const inputs = ['prop-x', 'prop-y', 'prop-w', 'prop-h', 'prop-name'];
+                inputs.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    if (sel) {
+                        el.removeAttribute('disabled');
+                        if (id === 'prop-x') el.value = Math.round(sel.x);
+                        if (id === 'prop-y') el.value = Math.round(sel.y);
+                        if (id === 'prop-w') el.value = Math.round(sel.w);
+                        if (id === 'prop-h') el.value = Math.round(sel.h);
+                        if (id === 'prop-name') el.value = sel.name || '';
+                    } else {
+                        el.setAttribute('disabled', '');
+                        el.value = '';
+                    }
+                });
+                updateColorPaletteSelection();
+            }
+
+            function updateStatusBar() {
+                document.getElementById('status-tool').textContent = '工具: ' +
+                    (currentTool === 'smart' ? '智能' : currentTool === 'select' ? '选择' : '绘制');
+                document.getElementById('status-zoom').textContent = '缩放: ' + Math.round(scale * 100) + '%';
+                const imgPos = screenToImage(lastMouseScreenX, lastMouseScreenY);
+                if (imageObj && imgPos.x >= 0 && imgPos.x <= imageNaturalW && imgPos.y >= 0 && imgPos.y <=
+                    imageNaturalH) {
+                    document.getElementById('status-pos').textContent =
+                        '' + Math.round(imgPos.x) + ', ' + Math.round(imgPos.y);
+                } else {
+                    document.getElementById('status-pos').textContent = '--';
+                }
+                document.getElementById('status-anno-count').textContent = '标注: ' + annotations.length;
+                document.getElementById('status-selected').textContent = '选中: ' + selectedIds.size;
+            }
+
+            function render() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                if (imageObj) {
+                    ctx.save();
+                    ctx.translate(offsetX, offsetY);
+                    ctx.scale(scale, scale);
+                    ctx.drawImage(imageObj, 0, 0, imageNaturalW, imageNaturalH);
+                    const imgRight = imageNaturalW;
+                    const imgBottom = imageNaturalH;
+                    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--fg4').trim();
+                    ctx.lineWidth = 1 / scale;
+                    ctx.setLineDash([4 / scale, 4 / scale]);
+                    ctx.strokeRect(-1 / scale, -1 / scale, imgRight + 2 / scale, imgBottom + 2 / scale);
+                    ctx.setLineDash([]);
+                    ctx.restore();
+                    for (const a of annotations) {
+                        if (!a.visible) continue;
+                        drawAnnotation(a);
+                    }
+                    if (drawPhaseOne && currentTool !== 'select') {
+                        drawPreviewBox();
+                    }
+                    if (isMarqueeSelecting) {
+                        drawMarquee();
+                    }
+                    if (hoveredHandle && hoveredAnnoId !== null) {
+                        const ha = annotations.find(a => a.id === hoveredAnnoId);
+                        if (ha) {
+                            const sp = imageToScreen(ha.x + (hoveredHandle.includes('e') ? ha.w : hoveredHandle.includes(
+                                'w') ? 0 : ha.w / 2), ha.y + (hoveredHandle.includes('s') ? ha.h : hoveredHandle.includes(
+                                    'n') ? 0 : ha.h / 2));
+                            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue(
+                                '--color-primary').trim();
+                            ctx.fillRect(sp.x - HANDLE_SIZE / 2, sp.y - HANDLE_SIZE / 2, HANDLE_SIZE, HANDLE_SIZE);
+                        }
+                    }
+                }
+            }
+
+            function drawAnnotation(a) {
+                const sp = imageToScreen(a.x, a.y);
+                const sw = a.w * scale;
+                const sh = a.h * scale;
+                const isSelected = selectedIds.has(a.id);
+                const colorVal = getPresetColorValue(a.color);
+                ctx.save();
+                if (displayStyle === 'mask' || displayStyle === 'both') {
+                    ctx.fillStyle = colorVal;
+                    ctx.globalAlpha = 0.2;
+                    ctx.fillRect(sp.x, sp.y, sw, sh);
+                    ctx.globalAlpha = 1;
+                }
+                if (displayStyle === 'border' || displayStyle === 'both') {
+                    ctx.strokeStyle = colorVal;
+                    ctx.lineWidth = isSelected ? 2.5 : 1.5;
+                    if (a.locked) {
+                        ctx.setLineDash([6, 4]);
+                    }
+                    ctx.strokeRect(sp.x, sp.y, sw, sh);
+                    ctx.setLineDash([]);
+                }
+                if (isSelected && selectedIds.size === 1) {
+                    const hw = HANDLE_SIZE / 2;
+                    const handles = [
+                        { x: sp.x, y: sp.y }, { x: sp.x + sw / 2, y: sp.y }, { x: sp.x + sw, y: sp.y },
+                        { x: sp.x, y: sp.y + sh / 2 }, { x: sp.x + sw, y: sp.y + sh / 2 },
+                        { x: sp.x, y: sp.y + sh }, { x: sp.x + sw / 2, y: sp.y + sh }, {
+                            x: sp.x + sw, y: sp.y +
+                                sh
+                        }
+                    ];
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-primary')
+                        .trim();
+                    handles.forEach(h => {
+                        ctx.fillRect(h.x - hw, h.y - hw, HANDLE_SIZE, HANDLE_SIZE);
+                    });
+                }
+                if (a.name && (displayStyle === 'border' || displayStyle === 'both')) {
+                    ctx.fillStyle = colorVal;
+                    ctx.font = Math.max(10, 12 / (scale > 0 ? scale : 1) * scale) + 'px ' +
+                        'var(--font-family)';
+                    const textSize = ctx.measureText(a.name);
+                    const tx = sp.x;
+                    const ty = sp.y - 3;
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.fillRect(tx, ty - 12, textSize.width + 4, 14);
+                    ctx.fillStyle = colorVal;
+                    ctx.fillText(a.name, tx + 2, ty);
+                }
+                ctx.restore();
+            }
+
+            function drawPreviewBox() {
+                const x1 = Math.min(drawStartX, drawCurrentX);
+                const y1 = Math.min(drawStartY, drawCurrentY);
+                const w = Math.abs(drawCurrentX - drawStartX);
+                const h = Math.abs(drawCurrentY - drawStartY);
+                const clamped = clampToImage(x1, y1, w, h);
+                const sp = imageToScreen(clamped.x, clamped.y);
+                const sw = clamped.w * scale;
+                const sh = clamped.h * scale;
+                ctx.save();
+                ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim();
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 3]);
+                ctx.strokeRect(sp.x, sp.y, sw, sh);
+                ctx.setLineDash([]);
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim();
+                ctx.globalAlpha = 0.1;
+                ctx.fillRect(sp.x, sp.y, sw, sh);
+                ctx.globalAlpha = 1;
+                ctx.restore();
+            }
+
+            function drawMarquee() {
+                const x = Math.min(marqueeStartX, marqueeCurrentX);
+                const y = Math.min(marqueeStartY, marqueeCurrentY);
+                const w = Math.abs(marqueeCurrentX - marqueeStartX);
+                const h = Math.abs(marqueeCurrentY - marqueeStartY);
+                ctx.save();
+                ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim();
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 3]);
+                ctx.strokeRect(x, y, w, h);
+                ctx.setLineDash([]);
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim();
+                ctx.globalAlpha = 0.08;
+                ctx.fillRect(x, y, w, h);
+                ctx.globalAlpha = 1;
+                ctx.restore();
+            }
+
+            function fitImage() {
+                if (!imageObj) return;
+                const rect = workArea.getBoundingClientRect();
+                const availW = rect.width - 20;
+                const availH = rect.height - 20;
+                const scaleX = availW / imageNaturalW;
+                const scaleY = availH / imageNaturalH;
+                scale = Math.min(scaleX, scaleY, 1);
+                offsetX = (rect.width - imageNaturalW * scale) / 2;
+                offsetY = (rect.height - imageNaturalH * scale) / 2;
+                render();
+                updateStatusBar();
+            }
+
+            function zoomAt(screenX, screenY, factor) {
+                const imgPos = screenToImage(screenX, screenY);
+                const newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, scale * factor));
+                offsetX = screenX - imgPos.x * newScale;
+                offsetY = screenY - imgPos.y * newScale;
+                scale = newScale;
+                render();
+                updateStatusBar();
+            }
+
+            // ---------- 加载样本列表 ----------
+            function loadSampleList() {
+                fetch('/sample')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (Array.isArray(data)) {
+                            samples = data;
+                        } else if (typeof data === 'object' && data !== null) {
+                            samples = Object.entries(data).map(([name, url]) => ({ name, url }));
+                        } else {
+                            throw new Error('无效的样本数据格式');
+                        }
+                        sampleSelect.innerHTML = '';
+                        if (samples.length === 0) {
+                            sampleSelect.innerHTML = '<option value="">无样本</option>';
+                            return;
+                        }
+                        samples.forEach((s, i) => {
+                            const opt = document.createElement('option');
+                            opt.value = s.name;
+                            opt.textContent = s.name;
+                            if (i === 0) opt.selected = true;
+                            sampleSelect.appendChild(opt);
+                        });
+                        if (samples.length > 0) {
+                            currentSampleName = samples[0].name;
+                            roiNameInput.value = currentSampleName;
+                            loadImage(samples[0].url || samples[0].name);
+                        }
+                    })
+                    .catch(err => {
+                        showToast('加载样本列表失败: ' + err.message);
+                        sampleSelect.innerHTML = '<option value="">加载失败</option>';
+                    });
+            }
+
+            // ---------- 加载图片 ----------
+            function loadImage(src) {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = function () {
+                    imageObj = img;
+                    imageNaturalW = img.naturalWidth;
+                    imageNaturalH = img.naturalHeight;
+                    refWidthInput.value = imageNaturalW;
+                    refHeightInput.value = imageNaturalH;
+                    fitImage();
+                    updateStatusBar();
+                    if (currentSampleName) {
+                        loadROI(currentSampleName);
+                    }
+                };
+                img.onerror = function () {
+                    imageObj = null;
+                    imageNaturalW = 0;
+                    imageNaturalH = 0;
+                    render();
+                    showToast('图片加载失败');
+                };
+                img.src = src;
+            }
+
+            // ---------- 加载 ROI ----------
+            function loadROI(name) {
+                if (!name) {
+                    annotations = [];
+                    nextId = 1;
+                    selectedIds.clear();
+                    undoStack = [];
+                    redoStack = [];
+                    updateAnnotationList();
+                    updatePropsPanel();
+                    render();
+                    return;
+                }
+                fetch('/roi/' + encodeURIComponent(name))
+                    .then(r => {
+                        if (r.status === 404) {
+                            roiNameInput.value = name;
+                            annotations = [];
+                            nextId = 1;
+                            selectedIds.clear();
+                            undoStack = [];
+                            redoStack = [];
+                            updateAnnotationList();
+                            updatePropsPanel();
+                            render();
+                            return null;
+                        }
+                        if (!r.ok) throw new Error('加载失败: ' + r.status);
+                        return r.json();
+                    })
+                    .then(data => {
+                        if (data) {
+                            const raw = data.annotations || data.boxes || [];
+                            annotations = raw.map(a => ({
+                                id: a.id || 0,
+                                name: a.name || '',
+                                x: a.x || 0,
+                                y: a.y || 0,
+                                w: a.w || 1,
+                                h: a.h || 1,
+                                color: a.color || 0,
+                                locked: a.locked || false,
+                                visible: a.visible !== undefined ? a.visible : true
+                            }));
+                            nextId = annotations.length > 0 ? Math.max(...annotations.map(a => a.id)) + 1 : 1;
+                            if (data.referenceWidth) refWidthInput.value = data.referenceWidth;
+                            if (data.referenceHeight) refHeightInput.value = data.referenceHeight;
+                            selectedIds.clear();
+                            undoStack = [];
+                            redoStack = [];
+                            updateAnnotationList();
+                            updatePropsPanel();
+                            render();
+                            showToast('加载 ROI: ' + name + ' (' + annotations.length + ' 个标注)');
+                        }
+                    })
+                    .catch(err => showToast('加载ROI失败: ' + err.message));
+            }
+
+            // ---------- 保存 ROI ----------
+            function saveROI() {
+                const name = roiNameInput.value.trim() || currentSampleName;
+                if (!name) {
+                    showToast('请先输入ROI名称');
+                    return;
+                }
+                const boxes = annotations.map(a => ({
+                    id: a.id,
+                    name: a.name || '',
+                    x: Math.round(a.x),
+                    y: Math.round(a.y),
+                    w: Math.round(a.w),
+                    h: Math.round(a.h),
+                    color: a.color
+                }));
+                const payload = {
+                    boxes: boxes,
+                    referenceWidth: parseInt(refWidthInput.value) || imageNaturalW,
+                    referenceHeight: parseInt(refHeightInput.value) || imageNaturalH
+                };
+                fetch('/roi/' + encodeURIComponent(name), {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                    .then(r => {
+                        if (!r.ok) throw new Error('保存失败: ' + r.status);
+                        return r.json();
+                    })
+                    .then(() => {
+                        showToast('保存成功: ' + name + ' (' + boxes.length + ' 个标注)');
+                    })
+                    .catch(e => showToast('保存失败: ' + e.message));
+            }
+
+            // ---------- 创建标注 ----------
+            function createAnnotation(x, y, w, h) {
+                const clamped = clampToImage(x, y, w, h);
+                if (clamped.w < 2 && clamped.h < 2) return null;
+                const anno = {
+                    id: nextId++,
+                    name: '',
+                    x: clamped.x,
+                    y: clamped.y,
+                    w: clamped.w,
+                    h: clamped.h,
+                    color: annotations.length % PRESET_COLOR_NAMES.length,
+                    locked: false,
+                    visible: true
+                };
+                annotations.push(anno);
+                pushUndo();
+                updateAnnotationList();
+                render();
+                return anno;
+            }
+
+            function deleteSelectedAnnotations() {
+                if (selectedIds.size === 0) return;
+                pushUndo();
+                annotations = annotations.filter(a => !selectedIds.has(a.id));
+                selectedIds.clear();
+                updateAnnotationList();
+                updatePropsPanel();
+                render();
+            }
+
+            function selectAllAnnotations() {
+                pushUndo();
+                selectedIds.clear();
+                annotations.forEach(a => {
+                    if (!a.locked) selectedIds.add(a.id);
+                });
+                updateAnnotationList();
+                updatePropsPanel();
+                render();
+            }
+
+            function getCanvasPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            }
+
+            // ---------- 事件监听 ----------
+            canvas.addEventListener('mousedown', function (e) {
+                if (e.button === 1 || (e.button === 0 && spaceHeld)) {
+                    isPanning = true;
+                    const pos = getCanvasPos(e);
+                    panStartX = pos.x;
+                    panStartY = pos.y;
+                    panStartOffX = offsetX;
+                    panStartOffY = offsetY;
+                    canvas.style.cursor = 'grabbing';
+                    e.preventDefault();
+                    return;
+                }
+                if (e.button === 2) {
+                    if (drawPhaseOne) {
+                        drawPhaseOne = false;
+                        isDrawing = false;
+                        render();
+                    }
+                    e.preventDefault();
+                    return;
+                }
+                if (e.button !== 0) return;
+                const pos = getCanvasPos(e);
+                const imgPos = screenToImage(pos.x, pos.y);
+                lastMouseScreenX = pos.x;
+                lastMouseScreenY = pos.y;
+
+                // ---- 处理 Alt 拖动复制（在 smart 和 select 工具中） ----
+                const altPressed = e.altKey;
+
+                if (currentTool === 'select') {
+                    const hit = findAnnotationAtImg(imgPos.x, imgPos.y);
+                    if (hit && !hit.locked) {
+                        if (e.shiftKey) {
+                            if (selectedIds.has(hit.id)) selectedIds.delete(hit.id);
+                            else selectedIds.add(hit.id);
+                        } else {
+                            if (!selectedIds.has(hit.id)) {
+                                selectedIds.clear();
+                                selectedIds.add(hit.id);
+                            }
+                        }
+                        const handle = findHandleAtImg(hit, imgPos.x, imgPos.y);
+                        if (handle && selectedIds.has(hit.id) && selectedIds.size === 1) {
+                            isResizing = true;
+                            resizeAnnoId = hit.id;
+                            resizeHandle = handle;
+                            resizeStartAnno = { ...hit };
+                            resizeStartMouseImg = { x: imgPos.x, y: imgPos.y };
+                            pushUndo();
+                        } else if (selectedIds.has(hit.id)) {
+                            // ---- Alt 拖动复制 ----
+                            if (altPressed && selectedIds.size > 0) {
+                                const idMap = duplicateAnnotations(selectedIds, 0);
+                                if (idMap.size > 0) {
+                                    const newHitId = idMap.get(hit.id);
+                                    selectedIds.clear();
+                                    idMap.forEach(newId => selectedIds.add(newId));
+                                    isAltDragCopy = true;
+                                    isDraggingAnno = true;
+                                    dragAnnoId = newHitId || idMap.values().next().value;
+                                    dragStartAnno = annotations.map(a => ({ ...a }));
+                                    dragStartMouseImg = { x: imgPos.x, y: imgPos.y };
+                                    // 不 pushUndo，因为 duplicateAnnotations 已经 push 了
+                                    updateAnnotationList();
+                                    updatePropsPanel();
+                                    render();
+                                    e.preventDefault();
+                                    return;
+                                }
+                            }
+                            // 正常拖动
+                            isDraggingAnno = true;
+                            dragAnnoId = hit.id;
+                            dragStartAnno = annotations.map(a => ({ ...a }));
+                            dragStartMouseImg = { x: imgPos.x, y: imgPos.y };
+                            pushUndo();
+                        }
+                        updateAnnotationList();
+                        updatePropsPanel();
+                        render();
+                    } else {
+                        if (!e.shiftKey && selectedIds.size > 0) {
+                            selectedIds.clear();
+                            updateAnnotationList();
+                            updatePropsPanel();
+                            render();
+                        }
+                        isMarqueeSelecting = true;
+                        marqueeStartX = pos.x;
+                        marqueeStartY = pos.y;
+                        marqueeCurrentX = pos.x;
+                        marqueeCurrentY = pos.y;
+                    }
+                    return;
+                }
+
+                if (currentTool === 'draw') {
+                    if (drawMode === 0) {
+                        if (!drawPhaseOne) {
+                            drawPhaseOne = true;
+                            isDrawing = true;
+                            drawStartX = imgPos.x;
+                            drawStartY = imgPos.y;
+                            drawCurrentX = imgPos.x;
+                            drawCurrentY = imgPos.y;
+                        } else {
+                            const x1 = Math.min(drawStartX, imgPos.x);
+                            const y1 = Math.min(drawStartY, imgPos.y);
+                            const w = Math.abs(imgPos.x - drawStartX);
+                            const h = Math.abs(imgPos.y - drawStartY);
+                            const anno = createAnnotation(x1, y1, w, h);
+                            drawPhaseOne = false;
+                            isDrawing = false;
+                            if (anno) {
+                                selectedIds.clear();
+                                selectedIds.add(anno.id);
+                                updateAnnotationList();
+                                updatePropsPanel();
+                            }
+                            render();
+                        }
+                    } else {
+                        isDrawing = true;
+                        drawPhaseOne = false;
+                        drawStartX = imgPos.x;
+                        drawStartY = imgPos.y;
+                        drawCurrentX = imgPos.x;
+                        drawCurrentY = imgPos.y;
+                        pushUndo();
+                    }
+                    return;
+                }
+
+                if (currentTool === 'smart') {
+                    const hit = findAnnotationAtImg(imgPos.x, imgPos.y);
+                    if (hit && !hit.locked) {
+                        if (e.shiftKey) {
+                            if (selectedIds.has(hit.id)) selectedIds.delete(hit.id);
+                            else selectedIds.add(hit.id);
+                        } else {
+                            selectedIds.clear();
+                            selectedIds.add(hit.id);
+                        }
+                        const handle = findHandleAtImg(hit, imgPos.x, imgPos.y);
+                        if (handle && selectedIds.has(hit.id) && selectedIds.size === 1) {
+                            isResizing = true;
+                            resizeAnnoId = hit.id;
+                            resizeHandle = handle;
+                            resizeStartAnno = { ...hit };
+                            resizeStartMouseImg = { x: imgPos.x, y: imgPos.y };
+                            pushUndo();
+                        } else if (selectedIds.has(hit.id)) {
+                            // ---- Alt 拖动复制 ----
+                            if (altPressed && selectedIds.size > 0) {
+                                const idMap = duplicateAnnotations(selectedIds, 0);
+                                if (idMap.size > 0) {
+                                    const newHitId = idMap.get(hit.id);
+                                    selectedIds.clear();
+                                    idMap.forEach(newId => selectedIds.add(newId));
+                                    isAltDragCopy = true;
+                                    isDraggingAnno = true;
+                                    dragAnnoId = newHitId || idMap.values().next().value;
+                                    dragStartAnno = annotations.map(a => ({ ...a }));
+                                    dragStartMouseImg = { x: imgPos.x, y: imgPos.y };
+                                    updateAnnotationList();
+                                    updatePropsPanel();
+                                    render();
+                                    e.preventDefault();
+                                    return;
+                                }
+                            }
+                            // 正常拖动
+                            isDraggingAnno = true;
+                            dragAnnoId = hit.id;
+                            dragStartAnno = annotations.map(a => ({ ...a }));
+                            dragStartMouseImg = { x: imgPos.x, y: imgPos.y };
+                            pushUndo();
+                        }
+                        updateAnnotationList();
+                        updatePropsPanel();
+                        render();
+                    } else {
+                        if (drawMode === 0) {
+                            if (!drawPhaseOne) {
+                                drawPhaseOne = true;
+                                isDrawing = true;
+                                drawStartX = imgPos.x;
+                                drawStartY = imgPos.y;
+                                drawCurrentX = imgPos.x;
+                                drawCurrentY = imgPos.y;
+                                if (!e.shiftKey) {
+                                    selectedIds.clear();
+                                    updateAnnotationList();
+                                    updatePropsPanel();
+                                }
+                            } else {
+                                const x1 = Math.min(drawStartX, imgPos.x);
+                                const y1 = Math.min(drawStartY, imgPos.y);
+                                const w = Math.abs(imgPos.x - drawStartX);
+                                const h = Math.abs(imgPos.y - drawStartY);
+                                const anno = createAnnotation(x1, y1, w, h);
+                                drawPhaseOne = false;
+                                isDrawing = false;
+                                if (anno) {
+                                    selectedIds.clear();
+                                    selectedIds.add(anno.id);
+                                    updateAnnotationList();
+                                    updatePropsPanel();
+                                }
+                                render();
+                            }
+                        } else {
+                            isDrawing = true;
+                            drawPhaseOne = false;
+                            drawStartX = imgPos.x;
+                            drawStartY = imgPos.y;
+                            drawCurrentX = imgPos.x;
+                            drawCurrentY = imgPos.y;
+                            if (!e.shiftKey) {
+                                selectedIds.clear();
+                                updateAnnotationList();
+                                updatePropsPanel();
+                            }
+                            pushUndo();
+                        }
+                    }
+                    return;
+                }
+            });
+
+            canvas.addEventListener('mousemove', function (e) {
+                const pos = getCanvasPos(e);
+                lastMouseScreenX = pos.x;
+                lastMouseScreenY = pos.y;
+                if (spaceHeld) {
+                    canvas.style.cursor = isPanning ? 'grabbing' : 'grab';
+                    if (isPanning) {
+                        offsetX = panStartOffX + (pos.x - panStartX);
+                        offsetY = panStartOffY + (pos.y - panStartY);
+                        render();
+                        updateStatusBar();
+                    }
+                    return;
+                }
+                const imgPos = screenToImage(pos.x, pos.y);
+                if (isPanning) {
+                    offsetX = panStartOffX + (pos.x - panStartX);
+                    offsetY = panStartOffY + (pos.y - panStartY);
+                    render();
+                    updateStatusBar();
+                    return;
+                }
+                if (isDraggingAnno && dragAnnoId !== null) {
+                    const dx = imgPos.x - dragStartMouseImg.x;
+                    const dy = imgPos.y - dragStartMouseImg.y;
+                    const movedIds = new Set();
+                    if (selectedIds.has(dragAnnoId)) {
+                        selectedIds.forEach(id => {
+                            const a = annotations.find(a => a.id === id);
+                            if (a && !a.locked) movedIds.add(id);
+                        });
+                    } else {
+                        movedIds.add(dragAnnoId);
+                    }
+                    movedIds.forEach(id => {
+                        const a = annotations.find(a => a.id === id);
+                        const orig = dragStartAnno.find(o => o.id === id);
+                        if (a && orig) {
+                            let nx = orig.x + dx;
+                            let ny = orig.y + dy;
+                            const snapped = snapPosition(nx, ny, id);
+                            const clamped = clampPositionKeepSize(snapped.x, snapped.y, orig.w, orig.h);
+                            a.x = clamped.x;
+                            a.y = clamped.y;
+                            a.w = orig.w;
+                            a.h = orig.h;
+                        }
+                    });
+                    updateAnnotationList();
+                    updatePropsPanel();
+                    render();
+                    updateStatusBar();
+                    return;
+                }
+                if (isResizing && resizeAnnoId !== null) {
+                    const a = annotations.find(a => a.id === resizeAnnoId);
+                    if (a) {
+                        const dx = imgPos.x - resizeStartMouseImg.x;
+                        const dy = imgPos.y - resizeStartMouseImg.y;
+                        let nx = resizeStartAnno.x;
+                        let ny = resizeStartAnno.y;
+                        let nw = resizeStartAnno.w;
+                        let nh = resizeStartAnno.h;
+                        if (resizeHandle.includes('e')) nw = Math.max(1, resizeStartAnno.w + dx);
+                        if (resizeHandle.includes('w')) {
+                            nx = resizeStartAnno.x + dx;
+                            nw = Math.max(1, resizeStartAnno.w - dx);
+                        }
+                        if (resizeHandle.includes('s')) nh = Math.max(1, resizeStartAnno.h + dy);
+                        if (resizeHandle.includes('n')) {
+                            ny = resizeStartAnno.y + dy;
+                            nh = Math.max(1, resizeStartAnno.h - dy);
+                        }
+                        if (nw < 1) nw = 1;
+                        if (nh < 1) nh = 1;
+                        const snapped = snapRect({ x: nx, y: ny, w: nw, h: nh }, resizeAnnoId);
+                        const clamped = clampToImage(snapped.x, snapped.y, snapped.w, snapped.h);
+                        a.x = clamped.x;
+                        a.y = clamped.y;
+                        a.w = clamped.w;
+                        a.h = clamped.h;
+                        updateAnnotationList();
+                        updatePropsPanel();
+                        render();
+                        updateStatusBar();
+                    }
+                    return;
+                }
+                if (isMarqueeSelecting) {
+                    marqueeCurrentX = pos.x;
+                    marqueeCurrentY = pos.y;
+                    render();
+                    updateStatusBar();
+                    return;
+                }
+                if (isDrawing && (drawPhaseOne || drawMode === 1)) {
+                    drawCurrentX = imgPos.x;
+                    drawCurrentY = imgPos.y;
+                    render();
+                    updateStatusBar();
+                    return;
+                }
+                const hit = findAnnotationAtImg(imgPos.x, imgPos.y);
+                hoveredAnnoId = hit ? hit.id : null;
+                hoveredHandle = '';
+                if (hit && !hit.locked && selectedIds.has(hit.id) && selectedIds.size === 1) {
+                    hoveredHandle = findHandleAtImg(hit, imgPos.x, imgPos.y);
+                }
+                if (hoveredHandle) {
+                    canvas.style.cursor = hoveredHandle.includes('n') || hoveredHandle.includes('s') ? 'ns-resize' :
+                        hoveredHandle.includes('w') || hoveredHandle.includes('e') ? 'ew-resize' :
+                            hoveredHandle === 'nw' || hoveredHandle === 'se' ? 'nwse-resize' : 'nesw-resize';
+                } else if (hit && !hit.locked) {
+                    canvas.style.cursor = 'move';
+                } else if (currentTool === 'select') {
+                    canvas.style.cursor = 'default';
+                } else {
+                    canvas.style.cursor = 'crosshair';
+                }
+                updateStatusBar();
+            });
+
+            canvas.addEventListener('mouseup', function (e) {
+                if (isPanning) {
+                    isPanning = false;
+                    canvas.style.cursor = spaceHeld ? 'grab' : (currentTool === 'select' ? 'default' : 'crosshair');
+                    render();
+                    return;
+                }
+                if (isDraggingAnno) {
+                    isDraggingAnno = false;
+                    dragAnnoId = null;
+                    dragStartAnno = null;
+                    isAltDragCopy = false;
+                    updateAnnotationList();
+                    updatePropsPanel();
+                    render();
+                    return;
+                }
+                if (isResizing) {
+                    isResizing = false;
+                    resizeAnnoId = null;
+                    resizeHandle = '';
+                    resizeStartAnno = null;
+                    updateAnnotationList();
+                    updatePropsPanel();
+                    render();
+                    return;
+                }
+                if (isMarqueeSelecting) {
+                    isMarqueeSelecting = false;
+                    const x1 = Math.min(marqueeStartX, marqueeCurrentX);
+                    const y1 = Math.min(marqueeStartY, marqueeCurrentY);
+                    const w = Math.abs(marqueeCurrentX - marqueeStartX);
+                    const h = Math.abs(marqueeCurrentY - marqueeStartY);
+                    if (w > 3 || h > 3) {
+                        const imgTL = screenToImage(x1, y1);
+                        const imgBR = screenToImage(x1 + w, y1 + h);
+                        const selRect = {
+                            x: Math.min(imgTL.x, imgBR.x),
+                            y: Math.min(imgTL.y, imgBR.y),
+                            w: Math.abs(imgBR.x - imgTL.x),
+                            h: Math.abs(imgBR.y - imgTL.y)
+                        };
+                        if (!e.shiftKey) selectedIds.clear();
+                        annotations.forEach(a => {
+                            if (a.locked || !a.visible) return;
+                            if (a.x < selRect.x + selRect.w && a.x + a.w > selRect.x && a.y < selRect.y + selRect
+                                .h && a.y + a.h > selRect.y) {
+                                selectedIds.add(a.id);
+                            }
+                        });
+                        updateAnnotationList();
+                        updatePropsPanel();
+                    }
+                    render();
+                    return;
+                }
+                if (isDrawing && drawMode === 1) {
+                    const pos = getCanvasPos(e);
+                    const imgPos = screenToImage(pos.x, pos.y);
+                    const x1 = Math.min(drawStartX, imgPos.x);
+                    const y1 = Math.min(drawStartY, imgPos.y);
+                    const w = Math.abs(imgPos.x - drawStartX);
+                    const h = Math.abs(imgPos.y - drawStartY);
+                    const anno = createAnnotation(x1, y1, w, h);
+                    isDrawing = false;
+                    drawPhaseOne = false;
+                    if (anno) {
+                        selectedIds.clear();
+                        selectedIds.add(anno.id);
+                        updateAnnotationList();
+                        updatePropsPanel();
+                    }
+                    render();
+                }
+            });
+
+            canvas.addEventListener('wheel', function (e) {
+                e.preventDefault();
+                const pos = getCanvasPos(e);
+                const factor = e.deltaY < 0 ? 1.1 : 0.9;
+                zoomAt(pos.x, pos.y, factor);
+            });
+
+            canvas.addEventListener('contextmenu', function (e) {
+                e.preventDefault();
+                if (drawPhaseOne) {
+                    drawPhaseOne = false;
+                    isDrawing = false;
+                    render();
+                }
+            });
+
+            canvas.addEventListener('dblclick', function (e) {
+                if (drawPhaseOne && currentTool !== 'select') {
+                    const pos = getCanvasPos(e);
+                    const imgPos = screenToImage(pos.x, pos.y);
+                    const x1 = Math.min(drawStartX, imgPos.x);
+                    const y1 = Math.min(drawStartY, imgPos.y);
+                    const w = Math.abs(imgPos.x - drawStartX);
+                    const h = Math.abs(imgPos.y - drawStartY);
+                    const anno = createAnnotation(x1, y1, w, h);
+                    drawPhaseOne = false;
+                    isDrawing = false;
+                    if (anno) {
+                        selectedIds.clear();
+                        selectedIds.add(anno.id);
+                        updateAnnotationList();
+                        updatePropsPanel();
+                    }
+                    render();
+                }
+            });
+
+            // 触屏事件
+            canvas.addEventListener('touchstart', function (e) {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                if (e.touches.length === 2) {
+                    if (drawPhaseOne) {
+                        drawPhaseOne = false;
+                        isDrawing = false;
+                        render();
+                    }
+                    isPanning = false;
+                    isDraggingAnno = false;
+                    isResizing = false;
+                    isMarqueeSelecting = false;
+                    isDrawing = false;
+                    return;
+                }
+                const touch = e.touches[0];
+                const pos = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+                const imgPos = screenToImage(pos.x, pos.y);
+                lastMouseScreenX = pos.x;
+                lastMouseScreenY = pos.y;
+                if (currentTool === 'select') {
+                    const hit = findAnnotationAtImg(imgPos.x, imgPos.y);
+                    if (hit && !hit.locked) {
+                        selectedIds.clear();
+                        selectedIds.add(hit.id);
+                        isDraggingAnno = true;
+                        dragAnnoId = hit.id;
+                        dragStartAnno = annotations.map(a => ({ ...a }));
+                        dragStartMouseImg = { x: imgPos.x, y: imgPos.y };
+                        pushUndo();
+                        updateAnnotationList();
+                        updatePropsPanel();
+                        render();
+                        return;
+                    }
+                }
+                if (currentTool === 'smart') {
+                    const hit = findAnnotationAtImg(imgPos.x, imgPos.y);
+                    if (hit && !hit.locked) {
+                        selectedIds.clear();
+                        selectedIds.add(hit.id);
+                        isDraggingAnno = true;
+                        dragAnnoId = hit.id;
+                        dragStartAnno = annotations.map(a => ({ ...a }));
+                        dragStartMouseImg = { x: imgPos.x, y: imgPos.y };
+                        pushUndo();
+                        updateAnnotationList();
+                        updatePropsPanel();
+                        render();
+                        return;
+                    }
+                }
+                if (drawMode === 1) {
+                    isDrawing = true;
+                    drawStartX = imgPos.x;
+                    drawStartY = imgPos.y;
+                    drawCurrentX = imgPos.x;
+                    drawCurrentY = imgPos.y;
+                    selectedIds.clear();
+                    updateAnnotationList();
+                    updatePropsPanel();
+                    pushUndo();
+                } else {
+                    if (!drawPhaseOne) {
+                        drawPhaseOne = true;
+                        isDrawing = true;
+                        drawStartX = imgPos.x;
+                        drawStartY = imgPos.y;
+                        drawCurrentX = imgPos.x;
+                        drawCurrentY = imgPos.y;
+                        selectedIds.clear();
+                        updateAnnotationList();
+                        updatePropsPanel();
+                    } else {
+                        const x1 = Math.min(drawStartX, imgPos.x);
+                        const y1 = Math.min(drawStartY, imgPos.y);
+                        const w = Math.abs(imgPos.x - drawStartX);
+                        const h = Math.abs(imgPos.y - drawStartY);
+                        const anno = createAnnotation(x1, y1, w, h);
+                        drawPhaseOne = false;
+                        isDrawing = false;
+                        if (anno) {
+                            selectedIds.clear();
+                            selectedIds.add(anno.id);
+                            updateAnnotationList();
+                            updatePropsPanel();
+                        }
+                        render();
+                    }
+                }
+            });
+
+            canvas.addEventListener('touchmove', function (e) {
+                e.preventDefault();
+                if (e.touches.length === 2) return;
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const pos = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+                const imgPos = screenToImage(pos.x, pos.y);
+                lastMouseScreenX = pos.x;
+                lastMouseScreenY = pos.y;
+                if (isDraggingAnno && dragAnnoId !== null) {
+                    const dx = imgPos.x - dragStartMouseImg.x;
+                    const dy = imgPos.y - dragStartMouseImg.y;
+                    const movedIds = new Set();
+                    if (selectedIds.has(dragAnnoId)) {
+                        selectedIds.forEach(id => {
+                            const a = annotations.find(a => a.id === id);
+                            if (a && !a.locked) movedIds.add(id);
+                        });
+                    } else { movedIds.add(dragAnnoId); }
+                    movedIds.forEach(id => {
+                        const a = annotations.find(a => a.id === id);
+                        const orig = dragStartAnno.find(o => o.id === id);
+                        if (a && orig) {
+                            let nx = orig.x + dx;
+                            let ny = orig.y + dy;
+                            const snapped = snapPosition(nx, ny, id);
+                            const clamped = clampPositionKeepSize(snapped.x, snapped.y, orig.w, orig.h);
+                            a.x = clamped.x;
+                            a.y = clamped.y;
+                            a.w = orig.w;
+                            a.h = orig.h;
+                        }
+                    });
+                    updateAnnotationList();
+                    updatePropsPanel();
+                    render();
+                }
+                if (isDrawing && (drawPhaseOne || drawMode === 1)) {
+                    drawCurrentX = imgPos.x;
+                    drawCurrentY = imgPos.y;
+                    render();
+                }
+            });
+
+            canvas.addEventListener('touchend', function (e) {
+                e.preventDefault();
+                if (isDraggingAnno) {
+                    isDraggingAnno = false;
+                    dragAnnoId = null;
+                    dragStartAnno = null;
+                    isAltDragCopy = false;
+                    updateAnnotationList();
+                    updatePropsPanel();
+                    render();
+                }
+                if (isDrawing && drawMode === 1) {
+                    const x1 = Math.min(drawStartX, drawCurrentX);
+                    const y1 = Math.min(drawStartY, drawCurrentY);
+                    const w = Math.abs(drawCurrentX - drawStartX);
+                    const h = Math.abs(drawCurrentY - drawStartY);
+                    const anno = createAnnotation(x1, y1, w, h);
+                    isDrawing = false;
+                    if (anno) {
+                        selectedIds.clear();
+                        selectedIds.add(anno.id);
+                        updateAnnotationList();
+                        updatePropsPanel();
+                    }
+                    render();
+                }
+            });
+
+            // ---------- 键盘事件 ----------
+            document.addEventListener('keydown', function (e) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName ===
+                    'TEXTAREA') return;
+                const key = e.key.toLowerCase();
+                if (key === ' ') {
+                    e.preventDefault();
+                    spaceHeld = true;
+                    if (!isPanning && !isDraggingAnno && !isResizing) {
+                        canvas.style.cursor = 'grab';
+                    }
+                    return;
+                }
+                if (key === 'v' && !e.ctrlKey && !e.metaKey) setTool('select');
+                if (key === 'b' && !e.ctrlKey && !e.metaKey) setTool('smart');
+                if (key === 'd' && !e.ctrlKey && !e.metaKey) setTool('draw');
+                if (key === 'escape') {
+                    if (drawPhaseOne) {
+                        drawPhaseOne = false;
+                        isDrawing = false;
+                        render();
+                    }
+                    if (isMarqueeSelecting) {
+                        isMarqueeSelecting = false;
+                        render();
+                    }
+                    selectedIds.clear();
+                    updateAnnotationList();
+                    updatePropsPanel();
+                    render();
+                }
+                if (key === 'delete' || key === 'backspace') deleteSelectedAnnotations();
+                if (e.ctrlKey && key === 'a') {
+                    e.preventDefault();
+                    selectAllAnnotations();
+                }
+                if (e.ctrlKey && key === 's') {
+                    e.preventDefault();
+                    saveROI();
+                }
+                if (e.ctrlKey && key === 'z' && !e.shiftKey) {
+                    e.preventDefault();
+                    undo();
+                }
+                if (e.ctrlKey && key === 'z' && e.shiftKey) {
+                    e.preventDefault();
+                    redo();
+                }
+                if (key === '+' || key === '=') zoomAt(canvas.width / 2, canvas.height / 2, 1.15);
+                if (key === '-') zoomAt(canvas.width / 2, canvas.height / 2, 0.87);
+                if (key === 'arrowleft') nudgeSelection(-1, 0);
+                if (key === 'arrowright') nudgeSelection(1, 0);
+                if (key === 'arrowup') nudgeSelection(0, -1);
+                if (key === 'arrowdown') nudgeSelection(0, 1);
+            });
+
+            document.addEventListener('keyup', function (e) {
+                if (e.key === ' ') {
+                    spaceHeld = false;
+                    if (!isPanning) {
+                        canvas.style.cursor = currentTool === 'select' ? 'default' : 'crosshair';
+                    }
+                }
+            });
+
+            function setTool(tool) {
+                currentTool = tool;
+                drawPhaseOne = false;
+                isDrawing = false;
+                isMarqueeSelecting = false;
+                document.getElementById('tool-smart').classList.toggle('active', tool === 'smart');
+                document.getElementById('tool-select').classList.toggle('active', tool === 'select');
+                document.getElementById('tool-draw').classList.toggle('active', tool === 'draw');
+                canvas.style.cursor = tool === 'select' ? 'default' : 'crosshair';
+                render();
+                updateStatusBar();
+            }
+
+            function nudgeSelection(dx, dy) {
+                if (selectedIds.size === 0) return;
+                const step = parseInt(document.getElementById('nudge-step').value) || 1;
+                const ndx = dx * step;
+                const ndy = dy * step;
+                pushUndo();
+                selectedIds.forEach(id => {
+                    const a = annotations.find(a => a.id === id);
+                    if (a && !a.locked) {
+                        a.x += ndx;
+                        a.y += ndy;
+                        const clamped = clampPositionKeepSize(a.x, a.y, a.w, a.h);
+                        a.x = clamped.x;
+                        a.y = clamped.y;
+                    }
+                });
+                updateAnnotationList();
+                updatePropsPanel();
+                render();
+            }
+
+            function adjustSize(dim, delta) {
+                if (selectedIds.size === 0) return;
+                const step = parseInt(document.getElementById('nudge-step').value) || 1;
+                const change = delta * step;
+                pushUndo();
+                selectedIds.forEach(id => {
+                    const a = annotations.find(a => a.id === id);
+                    if (a && !a.locked) {
+                        if (dim === 'w') {
+                            const newW = Math.max(1, a.w + change);
+                            const clamped = clampToImage(a.x, a.y, newW, a.h);
+                            a.w = clamped.w;
+                            a.x = clamped.x;
+                        } else if (dim === 'h') {
+                            const newH = Math.max(1, a.h + change);
+                            const clamped = clampToImage(a.x, a.y, a.w, newH);
+                            a.h = clamped.h;
+                            a.y = clamped.y;
+                        }
+                    }
+                });
+                updateAnnotationList();
+                updatePropsPanel();
+                render();
+            }
+
+            // ---------- 绑定UI控件 ----------
+            document.getElementById('tool-smart').addEventListener('click', () => setTool('smart'));
+            document.getElementById('tool-select').addEventListener('click', () => setTool('select'));
+            document.getElementById('tool-draw').addEventListener('click', () => setTool('draw'));
+            document.getElementById('display-both').addEventListener('click', function () {
+                displayStyle = 'both';
+                this.classList.add('active');
+                document.getElementById('display-border').classList.remove('active');
+                document.getElementById('display-mask').classList.remove('active');
+                render();
+            });
+            document.getElementById('display-border').addEventListener('click', function () {
+                displayStyle = 'border';
+                this.classList.add('active');
+                document.getElementById('display-both').classList.remove('active');
+                document.getElementById('display-mask').classList.remove('active');
+                render();
+            });
+            document.getElementById('display-mask').addEventListener('click', function () {
+                displayStyle = 'mask';
+                this.classList.add('active');
+                document.getElementById('display-both').classList.remove('active');
+                document.getElementById('display-border').classList.remove('active');
+                render();
+            });
+            document.getElementById('mode-click').addEventListener('click', function () {
+                drawMode = 0;
+                this.classList.add('active');
+                document.getElementById('mode-drag').classList.remove('active');
+                drawPhaseOne = false;
+                isDrawing = false;
+                render();
+            });
+            document.getElementById('mode-drag').addEventListener('click', function () {
+                drawMode = 1;
+                this.classList.add('active');
+                document.getElementById('mode-click').classList.remove('active');
+                drawPhaseOne = false;
+                isDrawing = false;
+                render();
+            });
+            document.getElementById('btn-save').addEventListener('click', saveROI);
+            document.getElementById('btn-undo').addEventListener('click', undo);
+            document.getElementById('btn-redo').addEventListener('click', redo);
+            document.getElementById('btn-fit').addEventListener('click', fitImage);
+            document.getElementById('btn-zoom-in').addEventListener('click', () => zoomAt(canvas.width / 2, canvas
+                .height / 2, 1.2));
+            document.getElementById('btn-zoom-out').addEventListener('click', () => zoomAt(canvas.width / 2, canvas
+                .height / 2, 0.83));
+            document.getElementById('batch-select-all').addEventListener('click', selectAllAnnotations);
+            document.getElementById('batch-deselect-all').addEventListener('click', () => {
+                selectedIds.clear();
+                updateAnnotationList();
+                updatePropsPanel();
+                render();
+            });
+            document.getElementById('batch-delete').addEventListener('click', deleteSelectedAnnotations);
+            // 新增：批量复制按钮
+            document.getElementById('batch-duplicate').addEventListener('click', batchDuplicateSelected);
+            document.getElementById('batch-toggle-lock').addEventListener('click', () => {
+                if (selectedIds.size === 0) return;
+                pushUndo();
+                const allLocked = Array.from(selectedIds).every(id => {
+                    const a = annotations.find(a => a.id === id);
+                    return a && a.locked;
+                });
+                const newLock = !allLocked;
+                selectedIds.forEach(id => {
+                    const a = annotations.find(a => a.id === id);
+                    if (a) { a.locked = newLock; if (newLock) selectedIds.delete(id); }
+                });
+                updateAnnotationList();
+                updatePropsPanel();
+                render();
+            });
+            document.getElementById('batch-toggle-vis').addEventListener('click', () => {
+                if (selectedIds.size === 0) return;
+                pushUndo();
+                const allVis = Array.from(selectedIds).every(id => {
+                    const a = annotations.find(a => a.id === id);
+                    return a && a.visible;
+                });
+                const newVis = !allVis;
+                selectedIds.forEach(id => {
+                    const a = annotations.find(a => a.id === id);
+                    if (a) { a.visible = newVis; if (!newVis) selectedIds.delete(id); }
+                });
+                updateAnnotationList();
+                updatePropsPanel();
+                render();
+            });
+            document.getElementById('nudge-up').addEventListener('click', () => nudgeSelection(0, -1));
+            document.getElementById('nudge-down').addEventListener('click', () => nudgeSelection(0, 1));
+            document.getElementById('nudge-left').addEventListener('click', () => nudgeSelection(-1, 0));
+            document.getElementById('nudge-right').addEventListener('click', () => nudgeSelection(1, 0));
+            document.getElementById('nudge-w-plus').addEventListener('click', () => adjustSize('w', 1));
+            document.getElementById('nudge-w-minus').addEventListener('click', () => adjustSize('w', -1));
+            document.getElementById('nudge-h-plus').addEventListener('click', () => adjustSize('h', 1));
+            document.getElementById('nudge-h-minus').addEventListener('click', () => adjustSize('h', -1));
+
+            document.getElementById('prop-x').addEventListener('change', function () {
+                const sel = getSingleSelectedAnnotation();
+                if (sel) {
+                    pushUndo();
+                    sel.x = parseFloat(this.value) || 0;
+                    updateAnnotationList();
+                    render();
+                }
+            });
+            document.getElementById('prop-y').addEventListener('change', function () {
+                const sel = getSingleSelectedAnnotation();
+                if (sel) {
+                    pushUndo();
+                    sel.y = parseFloat(this.value) || 0;
+                    updateAnnotationList();
+                    render();
+                }
+            });
+            document.getElementById('prop-w').addEventListener('change', function () {
+                const sel = getSingleSelectedAnnotation();
+                if (sel) {
+                    pushUndo();
+                    sel.w = Math.max(1, parseFloat(this.value) || 1);
+                    updateAnnotationList();
+                    render();
+                }
+            });
+            document.getElementById('prop-h').addEventListener('change', function () {
+                const sel = getSingleSelectedAnnotation();
+                if (sel) {
+                    pushUndo();
+                    sel.h = Math.max(1, parseFloat(this.value) || 1);
+                    updateAnnotationList();
+                    render();
+                }
+            });
+            document.getElementById('prop-name').addEventListener('change', function () {
+                const sel = getSingleSelectedAnnotation();
+                if (sel) {
+                    pushUndo();
+                    sel.name = this.value;
+                    updateAnnotationList();
+                    render();
+                }
+            });
+
+            sampleSelect.addEventListener('change', function () {
+                const name = this.value;
+                if (name && name !== currentSampleName) {
+                    currentSampleName = name;
+                    roiNameInput.value = name;
+                    const sample = samples.find(s => s.name === name);
+                    if (sample) loadImage(sample.url || sample.name);
+                }
+            });
+
+            roiNameInput.addEventListener('change', function () {
+                const name = this.value.trim();
+                if (name) {
+                    currentSampleName = name;
+                    loadROI(name);
+                }
+            });
+
+            window.addEventListener('resize', resizeCanvas);
+            const ro = new ResizeObserver(() => resizeCanvas());
+            ro.observe(workArea);
+
+            document.addEventListener('click', function (e) {
+                if (drawPhaseOne && !canvas.contains(e.target) && e.target !== canvas) {
+                    drawPhaseOne = false;
+                    isDrawing = false;
+                    render();
+                }
+            });
+
+            // ---------- 初始化 ----------
+            buildColorPalette();
+            resizeCanvas();
+            loadSampleList();
+            updateStatusBar();
+            updatePropsPanel();
+        })();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,33 @@
+{
+  "boxes": [
+    {
+      "id": 1,
+      "name": "cover",
+      "x": 0,
+      "y": 0,
+      "w": 412,
+      "h": 312,
+      "color": 0
+    },
+    {
+      "id": 3,
+      "name": "stats",
+      "x": 412,
+      "y": 0,
+      "w": 100,
+      "h": 312,
+      "color": 1
+    },
+    {
+      "id": 4,
+      "name": "title",
+      "x": 0,
+      "y": 312,
+      "w": 512,
+      "h": 72,
+      "color": 2
+    }
+  ],
+  "referenceWidth": 512,
+  "referenceHeight": 384
+}
