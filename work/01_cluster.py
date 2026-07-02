@@ -31,8 +31,8 @@ MORPH_KERNEL = (3, 3)
 SSIM_WINDOW_SIZE = 11
 
 # 判定阈值：同一页面需要同时满足 SSIM > 此值 且 diff < 此值
-SSIM_THRESHOLD = 0.9
-DIFF_THRESHOLD = 0.1
+SSIM_THRESHOLD = 0.3
+DIFF_THRESHOLD = 0.5
 
 # 拉普拉斯方差阈值：若页面簇的最大拉普拉斯方差低于此值，标记为低质量
 LAPLACIAN_LOW_QUALITY_THRESHOLD = 100
