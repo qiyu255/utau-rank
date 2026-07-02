@@ -486,7 +486,7 @@
                         isPurified: true,
                         frames: item.frames,
                         representative_frame: item.representative_frame,
-                        is_synthesized: item.is_synthesized
+                        low_quality: item.low_quality
                     });
                 });
 
@@ -513,7 +513,7 @@
 
             const filtered = data.filter(item => {
                 const state = itemStates.get(item.cluster_id);
-                if (currentFilter === 'synthesized') return item.is_synthesized;
+                if (currentFilter === 'synthesized') return item.low_quality;
                 if (currentFilter === 'deleted') return state.isDeleted;
                 return true;
             });
@@ -524,7 +524,7 @@
                 el.className = 'item';
                 el.dataset.id = item.cluster_id;
 
-                if (item.is_synthesized) el.classList.add('is-synthesized');
+                if (item.low_quality) el.classList.add('is-synthesized');
                 if (state.isDeleted) el.classList.add('marked-delete');
 
                 const img = document.createElement('img');
@@ -696,7 +696,7 @@
 
         function updateCounts() {
             const total = data.length;
-            const syn = data.filter(function(i) { return i.is_synthesized; }).length;
+            const syn = data.filter(function(i) { return i.low_quality; }).length;
             const del = Array.from(itemStates.values()).filter(function(s) { return s.isDeleted; }).length;
 
             document.getElementById('count-all').textContent = total;
