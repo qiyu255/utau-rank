@@ -3,13 +3,16 @@ import numpy as np
 import json
 import os
 import shutil
+import logging
 from glob import glob
+from datetime import datetime
 
 # ================== 全局配置参数 ==================
 ROI_LAYOUT_PATH = "data/roi_layout.json"
 FRAMES_DIR = "cache/frames"
 OUTPUT_DIR = "cache/purified"
 OUTPUT_JSON = "cache/02_purified.json"
+LOG_FILE = "logs/02_purified.txt"
 
 # 感知哈希差异阈值 (5% 对应汉明距离 ≤ 3，针对 64 位 pHash)
 HASH_THRESHOLD = 2
@@ -18,7 +21,7 @@ HASH_THRESHOLD = 2
 LAPLACIAN_LOW_QUALITY_THRESHOLD = 100
 
 # 淡入淡出及极暗/极亮帧过滤参数
-LUM_LOW_THRESHOLD = 20       # 极暗帧丢弃阈值 (stats 区域平均灰度值)
+LUM_LOW_THRESHOLD = 120       # 极暗帧丢弃阈值 (stats 区域平均灰度值)
 LUM_HIGH_THRESHOLD = 235     # 极亮帧丢弃阈值 (stats 区域平均灰度值)
 GRADIENT_MIN_LENGTH = 3      # 渐变最少连续帧数
 GRADIENT_DELTA = 5.0         # 渐变相邻帧亮度差阈值
@@ -31,14 +34,28 @@ FLOW_MEDIAN_BLUR = True      # 合成时对时序取中值；False 则为均值
 FRAME_PATTERN = "*.png"
 # =================================================
 
+# 配置日志系统
+os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8'),
+        logging.StreamHandler()  # 同时输出到控制台
+    ]
+)
+logger = logging.getLogger(__name__)
+
 # 检查 cv2.img_hash 是否可用
 if not hasattr(cv2, 'img_hash'):
     raise RuntimeError("当前 OpenCV 版本不支持 img_hash 模块，请安装 opencv-contrib-python")
+
 
 def load_roi_layout(path):
     with open(path, "r") as f:
         layout = json.load(f)
     return layout
+
 
 def adapt_roi(box, img_w, img_h, ref_w, ref_h):
     scale_x = img_w / ref_w
@@ -49,6 +66,7 @@ def adapt_roi(box, img_w, img_h, ref_w, ref_h):
     h = int(box["h"] * scale_y)
     return x, y, w, h
 
+
 def compute_brightness(img, roi):
     x, y, w, h = roi
     if w <= 0 or h <= 0:
@@ -57,6 +75,7 @@ def compute_brightness(img, roi):
     gray = cv2.cvtColor(roi_img, cv2.COLOR_BGR2GRAY)
     return np.mean(gray)
 
+
 def filter_fade_and_extreme_frames(brightness_list,
                                    low_thresh=LUM_LOW_THRESHOLD,
                                    high_thresh=LUM_HIGH_THRESHOLD,
@@ -64,22 +83,27 @@ def filter_fade_and_extreme_frames(brightness_list,
                                    grad_delta=GRADIENT_DELTA,
                                    margin=GRADIENT_MARGIN):
     """
-    返回需要保留的布尔掩码 (list of bool)
-    - 丢弃亮度低于 low_thresh 或高于 high_thresh 的帧（极暗/极亮）
-    - 丢弃所有检测到的单调渐变区间内的帧（淡入/淡出）
+    返回:
+        keep_mask: list[bool]  每一帧是否保留
+        reasons:   list[str]   每一帧的原因 ('keep', 'dark', 'bright', 'fade')
     """
     n = len(brightness_list)
     keep = [True] * n
+    reasons = ['keep'] * n
 
     # 1. 标记极暗/极亮帧
     for i in range(n):
         val = brightness_list[i]
-        if val < low_thresh or val > high_thresh:
+        if val < low_thresh:
             keep[i] = False
+            reasons[i] = 'dark'
+        elif val > high_thresh:
+            keep[i] = False
+            reasons[i] = 'bright'
 
     # 2. 检测渐变区间（单调递增/递减，变化量足够）
     if n < min_gradient_len + 1:
-        return keep
+        return keep, reasons
 
     diffs = np.diff(brightness_list)
     i = 0
@@ -95,24 +119,24 @@ def filter_fade_and_extreme_frames(brightness_list,
         if end >= n - 1:
             end = n - 2  # 限制为最后一个有效差分索引
 
-        # 计算实际渐变包含的帧数：从 start 到 end+1
         length = end + 1 - start + 1  # = end - start + 2
         if length >= min_gradient_len:
             total_change = abs(brightness_list[end+1] - brightness_list[start])
             if total_change > grad_delta * length:
-                # 标记渐变帧区域，并向外扩展 margin
                 fade_start = max(0, start - margin)
                 fade_end = min(n - 1, end + 1 + margin)
                 for j in range(fade_start, fade_end + 1):
                     keep[j] = False
-        # 继续从 end+1 开始扫描下一段
+                    reasons[j] = 'fade'
         i = end + 1
-    return keep
+    return keep, reasons
+
 
 def laplacian_variance(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     lap = cv2.Laplacian(gray, cv2.CV_64F)
     return lap.var()
+
 
 def blacken_cover(image, cover_roi):
     x, y, w, h = cover_roi
@@ -120,11 +144,13 @@ def blacken_cover(image, cover_roi):
         image[y:y+h, x:x+w] = 0
     return image
 
+
 def restore_cover(synthetic, original, cover_roi):
     x, y, w, h = cover_roi
     if w > 0 and h > 0:
         synthetic[y:y+h, x:x+w] = original[y:y+h, x:x+w]
     return synthetic
+
 
 def align_and_fuse(frames_path, ref_path, cover_roi):
     ref = cv2.imread(ref_path)
@@ -167,7 +193,10 @@ def align_and_fuse(frames_path, ref_path, cover_roi):
     fused = restore_cover(fused, ref, cover_roi)
     return fused
 
+
 def process():
+    logger.info("=== 开始处理 ===")
+
     layout = load_roi_layout(ROI_LAYOUT_PATH)
     ref_w = layout["referenceWidth"]
     ref_h = layout["referenceHeight"]
@@ -177,11 +206,13 @@ def process():
 
     frame_files = sorted(glob(os.path.join(FRAMES_DIR, FRAME_PATTERN)))
     if not frame_files:
-        print("没有找到任何帧文件，退出。")
+        logger.warning("没有找到任何帧文件，退出。")
         return
 
+    logger.info(f"找到 {len(frame_files)} 个帧文件")
+
     # 第一遍：读取亮度序列
-    print("第一遍：读取亮度序列...")
+    logger.info("第一遍：读取亮度序列...")
     brightness = []
     first_img = cv2.imread(frame_files[0])
     if first_img is None:
@@ -197,87 +228,114 @@ def process():
             continue
         brightness.append(compute_brightness(img, stats_roi))
 
+    # 记录亮度序列
+    logger.info("亮度序列 (帧名: 亮度值):")
+    for fname, bval in zip(frame_files, brightness):
+        logger.info(f"  {os.path.basename(fname)}: {bval:.2f}")
+
     # 过滤淡入淡出及极暗/极亮帧
-    keep_mask = filter_fade_and_extreme_frames(brightness)
+    keep_mask, reasons = filter_fade_and_extreme_frames(brightness)
     retained_files = [f for f, k in zip(frame_files, keep_mask) if k]
-    print(f"原始帧数: {len(frame_files)}, 保留帧数: {len(retained_files)}")
+    logger.info(f"原始帧数: {len(frame_files)}, 保留帧数: {len(retained_files)}")
+
+    # 记录每一帧的过滤原因
+    logger.info("每帧过滤原因:")
+    for fname, reason, kept in zip(frame_files, reasons, keep_mask):
+        status = "保留" if kept else "丢弃"
+        logger.info(f"  {os.path.basename(fname)}: {status} (原因: {reason})")
 
     if len(retained_files) == 0:
-        print("所有帧均被过滤，退出。")
+        logger.warning("所有帧均被过滤，退出。")
         return
 
     # 第二遍：计算感知哈希（pHashes）和拉普拉斯方差
-    print("第二遍：计算哈希与清晰度...")
+    logger.info("第二遍：计算哈希与清晰度...")
     hasher = cv2.img_hash.PHash_create()
 
-    hashes = []
-    laplacian_vars = []
+    hashes = []          # 存储哈希值 (numpy array)
+    laplacian_vars = []  # 存储方差
+    hash_hex_list = []   # 存储十六进制字符串用于日志
+
     for fpath in retained_files:
         img = cv2.imread(fpath)
         if img is None:
             hashes.append(None)
             laplacian_vars.append(0.0)
+            hash_hex_list.append("None")
             continue
         # 黑化 cover 区域，避免封面内容干扰哈希
         img_hashed = img.copy()
         blacken_cover(img_hashed, cover_roi)
         hash_val = hasher.compute(img_hashed)
         hashes.append(hash_val)
+        # 转换为十六进制字符串 (便于阅读)
+        hex_str = hash_val.tobytes().hex()
+        hash_hex_list.append(hex_str)
+
         var = laplacian_variance(img)
         laplacian_vars.append(var)
 
+    # 记录哈希和方差
+    logger.info("保留帧的哈希值 (十六进制) 与拉普拉斯方差:")
+    for fname, hhex, var in zip(retained_files, hash_hex_list, laplacian_vars):
+        logger.info(f"  {os.path.basename(fname)}: hash={hhex}, var={var:.2f}")
+
     # 聚类：使用 cv2.img_hash 的 compare 方法
-    print("聚类页面簇...")
+    logger.info(f"聚类页面簇，阈值 HASH_THRESHOLD = {HASH_THRESHOLD}...")
     clusters = []
     current_cluster = [0]
-    hash_threshold = HASH_THRESHOLD
     for i in range(1, len(hashes)):
         if hashes[i-1] is None or hashes[i] is None:
             current_cluster.append(i)
             continue
         dist = hasher.compare(hashes[i-1], hashes[i])
-        if dist <= hash_threshold:
+        if dist <= HASH_THRESHOLD:
             current_cluster.append(i)
         else:
             clusters.append(current_cluster)
             current_cluster = [i]
     clusters.append(current_cluster)
 
-    print(f"共形成 {len(clusters)} 个页面簇")
+    logger.info(f"共形成 {len(clusters)} 个页面簇")
+
+    # 记录聚类结果 (每个簇包含的帧索引)
+    for cid, cl in enumerate(clusters):
+        frame_names = [os.path.basename(retained_files[idx]) for idx in cl]
+        logger.info(f"簇 {cid}: 包含帧索引 {cl} -> {frame_names}")
 
     # 处理每个簇
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     result_info = []
     for cluster_id, indices in enumerate(clusters):
-        print(f"处理簇 {cluster_id}，包含 {len(indices)} 帧")
+        logger.info(f"处理簇 {cluster_id}，包含 {len(indices)} 帧")
         cluster_vars = [laplacian_vars[idx] for idx in indices]
         max_var = max(cluster_vars)
         best_idx_in_cluster = indices[cluster_vars.index(max_var)]
         rep_path = retained_files[best_idx_in_cluster]
+        logger.info(f"  代表帧选择: {os.path.basename(rep_path)} (最大方差 = {max_var:.2f})")
 
         is_low_quality = max_var < LAPLACIAN_LOW_QUALITY_THRESHOLD
         output_name = os.path.basename(rep_path)
         output_path = os.path.join(OUTPUT_DIR, output_name)
 
         if is_low_quality:
-            print(f"  低质量簇，最大方差 {max_var:.2f} < {LAPLACIAN_LOW_QUALITY_THRESHOLD}，进行光流对齐融合...")
+            logger.info(f"  低质量簇 (方差 {max_var:.2f} < {LAPLACIAN_LOW_QUALITY_THRESHOLD})，进行光流对齐融合...")
             cluster_paths = [retained_files[idx] for idx in indices]
             try:
                 fused_img = align_and_fuse(cluster_paths, rep_path, cover_roi)
                 cv2.imwrite(output_path, fused_img)
-                print(f"  合成图已保存: {output_path}")
+                logger.info(f"  合成图已保存: {output_path}")
             except Exception as e:
-                print(f"  光流融合失败: {e}，回退为普通代表帧")
+                logger.error(f"  光流融合失败: {e}，回退为普通代表帧")
                 shutil.copy2(rep_path, output_path)
         else:
             shutil.copy2(rep_path, output_path)
-            print(f"  代表帧已复制: {output_path}")
+            logger.info(f"  代表帧已复制: {output_path}")
 
         cluster_info = {
             "cluster_id": cluster_id,
-            # "num_frames": len(indices),
-            "max_laplacian_var": float(max_var),          # 转为原生 Python float
-            "low_quality": bool(is_low_quality),          # 转为原生 Python bool
+            "max_laplacian_var": float(max_var),
+            "low_quality": bool(is_low_quality),
             "representative_frame": output_name,
             "frames": [os.path.basename(retained_files[idx]) for idx in indices]
         }
@@ -285,8 +343,10 @@ def process():
 
     with open(OUTPUT_JSON, "w") as f:
         json.dump(result_info, f, indent=2, ensure_ascii=False)
-    print(f"关联信息已保存至 {OUTPUT_JSON}")
-    print("处理完成！")
+    logger.info(f"关联信息已保存至 {OUTPUT_JSON}")
+
+    logger.info("=== 处理完成 ===")
+
 
 if __name__ == "__main__":
     process()
