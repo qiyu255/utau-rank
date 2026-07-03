@@ -155,7 +155,7 @@ def process():
     #             {"step": "abandon", "frames": []}]
 
     os.makedirs(CRUSH_DIR, exist_ok=True)
-    t = Table('00_collect')
+    t = Sheet('00_collect')
     for path in frames:
         name = os.path.basename(path)
         cimg = crush(path, os.path.join(CRUSH_DIR, name))

@@ -143,7 +143,7 @@ def concat_image(images, bg=(255, 255, 255)):
     return canvas
 
 
-def crop_image(img, crop_params):
+def crop_image(img, crop_params) -> np.ndarray:
     img_h, img_w = img.shape[:2]
 
     x = int(crop_params.get('x', 0))
@@ -174,7 +174,7 @@ def crop_image(img, crop_params):
     return img[y:y+h, x:x+w]
 
 
-class Table:
+class Sheet:
     def __init__(self, name, mode='w'):
         os.makedirs('cache/csv', exist_ok=True)
         self._f = open(f'cache/csv/{name}.csv', mode,
