@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-hans" data-theme="dark">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -322,6 +323,110 @@
             text-align: right;
         }
 
+        /* ===== 色块标记按钮 ===== */
+        .color-swatch {
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: var(--radius-sm);
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: transform var(--transition-time) ease, border-color var(--transition-time) ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-xs);
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+            line-height: 1;
+            padding: 0;
+            background: none;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.1);
+        }
+
+        .color-swatch.active {
+            border-color: var(--fg1);
+            transform: scale(1.15);
+            box-shadow: 0 0 0 2px var(--bg_s), 0 0 0 4px var(--fg1);
+        }
+
+        .color-swatch .swatch-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: calc(var(--radius-sm) - 1px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 橡皮擦图标 - CSS渐变绘制 */
+        .eraser-btn {
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: var(--radius-sm);
+            border: 2px solid var(--bg3);
+            cursor: pointer;
+            transition: transform var(--transition-time) ease, border-color var(--transition-time) ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            background: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .eraser-btn:hover {
+            transform: scale(1.1);
+            border-color: var(--fg3);
+        }
+
+        .eraser-btn.active {
+            border-color: var(--fg1);
+            transform: scale(1.15);
+            box-shadow: 0 0 0 2px var(--bg_s), 0 0 0 4px var(--fg1);
+        }
+
+        .eraser-icon {
+            width: 1rem;
+            height: 1rem;
+            position: relative;
+        }
+
+        /* 橡皮擦主体 - 倾斜的矩形 */
+        .eraser-icon::before {
+            content: '';
+            position: absolute;
+            width: 70%;
+            height: 55%;
+            top: 10%;
+            left: 15%;
+            background: linear-gradient(180deg, #e8e8e8 0%, #d0d0d0 50%, #b8b8b8 100%);
+            border-radius: 1px;
+            transform: rotate(-15deg);
+            border: 1px solid #999;
+        }
+
+        /* 橡皮擦擦除效果 - 斜线渐变 */
+        .eraser-icon::after {
+            content: '';
+            position: absolute;
+            width: 90%;
+            height: 35%;
+            bottom: 5%;
+            left: 5%;
+            background: repeating-linear-gradient(-45deg,
+                    transparent,
+                    transparent 2px,
+                    var(--fg3) 2px,
+                    var(--fg3) 3px);
+            opacity: 0.6;
+            border-radius: 1px;
+        }
+
         .gallery {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -348,12 +453,25 @@
             object-fit: contain;
         }
 
-        .item.is-synthesized {
-            outline-color: var(--orange);
+        /* 颜色标记边框 - 使用 CSS 变量 */
+        .item.mark-red {
+            outline-color: var(--red);
         }
 
-        .item.marked-delete {
-            outline-color: var(--red);
+        .item.mark-green {
+            outline-color: var(--green);
+        }
+
+        .item.mark-blue {
+            outline-color: var(--blue);
+        }
+
+        .item.mark-yellow {
+            outline-color: var(--yellow);
+        }
+
+        .item.mark-purple {
+            outline-color: var(--purple);
         }
 
         .item-overlay {
@@ -430,11 +548,11 @@
             outline-offset: 2px;
         }
 
-        body.quick-mark-mode .item {
+        body.mark-mode .item {
             cursor: crosshair;
         }
 
-        body.quick-mark-mode .item-overlay {
+        body.mark-mode .item-overlay {
             display: none;
         }
 
@@ -442,6 +560,7 @@
             .gallery {
                 grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             }
+
             .app-toolbar {
                 padding: 0.375rem 0.5rem;
             }
@@ -453,22 +572,21 @@
             }
         }
     </style>
-<base target="_blank">
+    <base target="_blank">
+    <base target="_blank">
 </head>
+
 <body>
     <div class="app-toolbar" id="toolbar">
         <div class="toolbar-group">
             <select id="dataset-select" class="dataset-select" onchange="changeDataset(this.value)"></select>
         </div>
-        <div class="toolbar-group">
-            <button class="btn-text active" id="btn-all" onclick="toggleShowAll()">全部(<span id="count-all">0</span>)</button>
-            <button class="btn-text" id="btn-syn" onclick="filterView('synthesized')">合成(<span id="count-syn">0</span>)</button>
-            <button class="btn-text" id="btn-del" onclick="filterView('deleted')">删除(<span id="count-del">0</span>)</button>
+        <div class="toolbar-group" id="color-toolbar">
+            <!-- 色块按钮由 JS 动态生成 -->
         </div>
         <div class="toolbar-spacer"></div>
         <div class="status-bar" id="status"></div>
         <div class="toolbar-group">
-            <button class="btn-text" id="btn-quick" onclick="toggleQuickMark()">标记</button>
             <button class="btn-outline" onclick="submitMarks()">提交</button>
         </div>
     </div>
@@ -477,34 +595,40 @@
 
     <script>
         const items = [
-            '00_collect',
-            '01_cluster', 
+            'yes', 'no',
+            '00_good',
+            '00_miss',
+            '01_cluster',
             '02_purified',
         ];
-        let selected = 1;
+        let selected = 0;
 
         let data = [];
         let currentFilter = 'all';
-        let quickMarkMode = false;
+        let markMode = false;
         let isPointerDown = false;
         let lastHoveredId = null;
         let statusTimer = null;
         let showAllFrames = false;
 
+        // 颜色标记配置（使用主题 CSS 变量）
+        const MARK_COLORS = [
+            { key: 'red', cssVar: 'var(--red)', label: '红' },
+            { key: 'green', cssVar: 'var(--green)', label: '绿' },
+            { key: 'blue', cssVar: 'var(--blue)', label: '蓝' },
+            { key: 'yellow', cssVar: 'var(--yellow)', label: '黄' },
+            { key: 'purple', cssVar: 'var(--purple)', label: '紫' },
+        ];
+        let activeMarkColor = null; // null 表示未选中，'erase' 表示橡皮擦
+
         const galleryEl = document.getElementById('gallery');
         const statusEl = document.getElementById('status');
         const itemStates = new Map();
 
-        const filterBtnMap = {
-            all: 'btn-all',
-            synthesized: 'btn-syn',
-            deleted: 'btn-del'
-        };
-
         function initDatasetSelect() {
             const select = document.getElementById('dataset-select');
             select.innerHTML = '';
-            items.forEach(function(item, index) {
+            items.forEach(function (item, index) {
                 const option = document.createElement('option');
                 option.value = index;
                 option.textContent = item;
@@ -513,15 +637,72 @@
             });
         }
 
+        function initColorToolbar() {
+            const toolbar = document.getElementById('color-toolbar');
+            toolbar.innerHTML = '';
+
+            MARK_COLORS.forEach(function (mc) {
+                const btn = document.createElement('button');
+                btn.className = 'color-swatch';
+                btn.title = '标记' + mc.label + '色 (' + mc.key + ')';
+                btn.dataset.color = mc.key;
+                btn.innerHTML = '<span class="swatch-inner" style="background-color:' + mc.cssVar + '"></span>';
+                btn.onclick = function () {
+                    toggleMarkColor(mc.key);
+                };
+                toolbar.appendChild(btn);
+            });
+
+            // 橡皮擦
+            const eraserBtn = document.createElement('button');
+            eraserBtn.className = 'eraser-btn';
+            eraserBtn.title = '清除标记 (橡皮擦)';
+            eraserBtn.dataset.color = 'erase';
+            eraserBtn.innerHTML = '<span class="eraser-icon"></span>';
+            eraserBtn.onclick = function () {
+                toggleMarkColor('erase');
+            };
+            toolbar.appendChild(eraserBtn);
+        }
+
+        function toggleMarkColor(colorKey) {
+            if (activeMarkColor === colorKey) {
+                activeMarkColor = null;
+                markMode = false;
+            } else {
+                activeMarkColor = colorKey;
+                markMode = true;
+            }
+
+            document.body.classList.toggle('mark-mode', markMode);
+
+            // 更新按钮状态
+            document.querySelectorAll('.color-swatch, .eraser-btn').forEach(function (btn) {
+                btn.classList.toggle('active', btn.dataset.color === activeMarkColor);
+            });
+
+            if (activeMarkColor === 'erase') {
+                showStatus('橡皮擦模式');
+            } else if (activeMarkColor) {
+                const c = MARK_COLORS.find(function (x) { return x.key === activeMarkColor; });
+                showStatus('标记模式: ' + (c ? c.label : activeMarkColor));
+            } else {
+                showStatus('标记模式已关闭');
+            }
+        }
+
         function changeDataset(index) {
             selected = parseInt(index, 10);
             currentFilter = 'all';
             showAllFrames = false;
-            document.querySelectorAll('.btn-text').forEach(function(btn) {
-                btn.classList.remove('active');
-            });
-            document.getElementById('btn-all').classList.add('active');
+            activeMarkColor = null;
+            markMode = false;
+            document.body.classList.remove('mark-mode');
             init();
+        }
+
+        function isLowQuality(item) {
+            return item.indicator && item.indicator.bad !== undefined && item.indicator.bad > 0.5;
         }
 
         async function init() {
@@ -533,15 +714,14 @@
                 itemStates.clear();
 
                 data.forEach(item => {
-                    const repIndex = item.frames.indexOf(item.representative_frame);
-                    itemStates.set(item.cluster_id, {
-                        cluster_id: item.cluster_id,
-                        currentFrameIndex: repIndex >= 0 ? repIndex : 0,
-                        isDeleted: false,
-                        isPurified: true,
+                    const bestIndex = item.frames.indexOf(item.best);
+                    itemStates.set(item.id, {
+                        id: item.id,
+                        currentFrameIndex: bestIndex >= 0 ? bestIndex : 0,
+                        markColor: null, // null | 'red' | 'green' | 'blue' | 'yellow' | 'purple'
                         frames: item.frames,
-                        representative_frame: item.representative_frame,
-                        low_quality: item.low_quality
+                        best: item.best,
+                        indicator: item.indicator || {}
                     });
                 });
 
@@ -554,10 +734,11 @@
             }
         }
 
-        function getImageUrl(clusterId, frameIndex) {
-            const state = itemStates.get(clusterId);
+        function getImageUrl(id, frameIndex) {
+            const state = itemStates.get(id);
             const frame = state.frames[frameIndex !== undefined ? frameIndex : state.currentFrameIndex];
-            if (state.isPurified && frameIndex === undefined) {
+            const isBestFrame = frame === state.best;
+            if (isBestFrame) {
                 return '/cache/purified/' + frame;
             }
             return '/cache/frames/' + frame;
@@ -567,32 +748,30 @@
             galleryEl.innerHTML = '';
 
             const filtered = data.filter(item => {
-                const state = itemStates.get(item.cluster_id);
-                if (currentFilter === 'synthesized') return item.low_quality;
-                if (currentFilter === 'deleted') return state.isDeleted;
-                return true;
+                return true; // 目前不过滤，显示全部
             });
 
             filtered.forEach(item => {
-                const state = itemStates.get(item.cluster_id);
-                const framesToShow = showAllFrames ? state.frames : [state.representative_frame];
+                const state = itemStates.get(item.id);
+                const framesToShow = showAllFrames ? state.frames : [state.best];
 
-                framesToShow.forEach(function(frameName, frameIdx) {
+                framesToShow.forEach(function (frameName, frameIdx) {
                     const frameIndex = state.frames.indexOf(frameName);
                     const el = document.createElement('div');
                     el.className = 'item';
-                    el.dataset.id = item.cluster_id;
+                    el.dataset.id = item.id;
                     el.dataset.frame = frameName;
 
-                    if (item.low_quality) el.classList.add('is-synthesized');
-                    if (state.isDeleted) el.classList.add('marked-delete');
+                    if (state.markColor) {
+                        el.classList.add('mark-' + state.markColor);
+                    }
 
                     const img = document.createElement('img');
-                    img.src = getImageUrl(item.cluster_id, frameIndex);
+                    img.src = getImageUrl(item.id, frameIndex);
                     img.alt = frameName;
                     img.loading = 'lazy';
                     img.draggable = false;
-                    img.onerror = function() {
+                    img.onerror = function () {
                         const currentSrc = this.src;
                         if (currentSrc.includes('/cache/purified/')) {
                             this.src = currentSrc.replace('/cache/purified/', '/cache/frames/');
@@ -611,16 +790,16 @@
                     const basenameEl = document.createElement('span');
                     basenameEl.className = 'frame-basename';
                     basenameEl.textContent = frameName.replace(/\.[^.]+$/, '');
-                    basenameEl.dataset.id = item.cluster_id;
+                    basenameEl.dataset.id = item.id;
                     top.appendChild(basenameEl);
 
                     const delBtn = document.createElement('button');
                     delBtn.className = 'overlay-btn delete-btn';
                     delBtn.textContent = '\u2715';
-                    delBtn.title = '标记删除';
-                    delBtn.onclick = function(e) {
+                    delBtn.title = '标记红色';
+                    delBtn.onclick = function (e) {
                         e.stopPropagation();
-                        toggleDelete(item.cluster_id);
+                        setMarkColor(item.id, 'red');
                     };
                     top.appendChild(delBtn);
 
@@ -631,27 +810,27 @@
                     prevBtn.className = 'overlay-btn';
                     prevBtn.textContent = '\u2190';
                     prevBtn.title = '上一帧';
-                    prevBtn.onclick = function(e) {
+                    prevBtn.onclick = function (e) {
                         e.stopPropagation();
-                        cycleFrame(item.cluster_id, -1);
+                        cycleFrame(item.id, -1);
                     };
 
                     const resetBtn = document.createElement('button');
                     resetBtn.className = 'overlay-btn';
                     resetBtn.textContent = '\u2606';
-                    resetBtn.title = '恢复代表帧';
-                    resetBtn.onclick = function(e) {
+                    resetBtn.title = '恢复最佳帧';
+                    resetBtn.onclick = function (e) {
                         e.stopPropagation();
-                        resetFrame(item.cluster_id);
+                        resetFrame(item.id);
                     };
 
                     const nextBtn = document.createElement('button');
                     nextBtn.className = 'overlay-btn';
                     nextBtn.textContent = '\u2192';
                     nextBtn.title = '下一帧';
-                    nextBtn.onclick = function(e) {
+                    nextBtn.onclick = function (e) {
                         e.stopPropagation();
-                        cycleFrame(item.cluster_id, 1);
+                        cycleFrame(item.id, 1);
                     };
 
                     bottom.appendChild(prevBtn);
@@ -664,17 +843,37 @@
                     el.appendChild(img);
                     el.appendChild(overlay);
 
-                    el.addEventListener('click', function() {
-                        if (quickMarkMode) {
-                            toggleDelete(item.cluster_id);
+                    el.addEventListener('click', function () {
+                        if (markMode && activeMarkColor) {
+                            if (activeMarkColor === 'erase') {
+                                setMarkColor(item.id, null);
+                            } else {
+                                setMarkColor(item.id, activeMarkColor);
+                            }
                         }
                     });
 
-                    el.addEventListener('mouseenter', function() {
-                        if (quickMarkMode && isPointerDown) {
-                            if (lastHoveredId !== item.cluster_id) {
-                                lastHoveredId = item.cluster_id;
-                                toggleDelete(item.cluster_id);
+                    el.addEventListener('mousedown', function (e) {
+                        if (markMode && activeMarkColor) {
+                            e.preventDefault();
+                            lastHoveredId = item.id;
+                            if (activeMarkColor === 'erase') {
+                                setMarkColor(item.id, null);
+                            } else {
+                                setMarkColor(item.id, activeMarkColor);
+                            }
+                        }
+                    });
+
+                    el.addEventListener('mouseenter', function () {
+                        if (markMode && isPointerDown && activeMarkColor) {
+                            if (lastHoveredId !== item.id) {
+                                lastHoveredId = item.id;
+                                if (activeMarkColor === 'erase') {
+                                    setMarkColor(item.id, null);
+                                } else {
+                                    setMarkColor(item.id, activeMarkColor);
+                                }
                             }
                         }
                     });
@@ -684,16 +883,26 @@
             });
         }
 
-        function toggleShowAll() {
-            showAllFrames = !showAllFrames;
-            document.getElementById('btn-all').classList.toggle('active', showAllFrames);
-            showStatus(showAllFrames ? '显示所有帧' : '仅显示代表帧');
-            render();
+        function setMarkColor(id, color) {
+            const state = itemStates.get(id);
+            state.markColor = color;
+
+            const itemEls = galleryEl.querySelectorAll('[data-id="' + id + '"]');
+            itemEls.forEach(function (el) {
+                // 清除所有颜色标记类
+                MARK_COLORS.forEach(function (mc) {
+                    el.classList.remove('mark-' + mc.key);
+                });
+                if (color) {
+                    el.classList.add('mark-' + color);
+                }
+            });
+
             updateCounts();
         }
 
-        function cycleFrame(clusterId, direction) {
-            const state = itemStates.get(clusterId);
+        function cycleFrame(id, direction) {
+            const state = itemStates.get(id);
             state.currentFrameIndex += direction;
             if (state.currentFrameIndex < 0) {
                 state.currentFrameIndex = state.frames.length - 1;
@@ -701,13 +910,12 @@
             if (state.currentFrameIndex >= state.frames.length) {
                 state.currentFrameIndex = 0;
             }
-            state.isPurified = false;
 
-            const itemEls = galleryEl.querySelectorAll('[data-id="' + clusterId + '"]');
-            itemEls.forEach(function(el) {
+            const itemEls = galleryEl.querySelectorAll('[data-id="' + id + '"]');
+            itemEls.forEach(function (el) {
                 const img = el.querySelector('img');
                 const frameName = state.frames[state.currentFrameIndex];
-                img.src = getImageUrl(clusterId, state.currentFrameIndex);
+                img.src = getImageUrl(id, state.currentFrameIndex);
                 img.alt = frameName;
                 const basenameEl = el.querySelector('.frame-basename');
                 if (basenameEl) {
@@ -716,84 +924,48 @@
             });
         }
 
-        function resetFrame(clusterId) {
-            const state = itemStates.get(clusterId);
-            const repIndex = state.frames.indexOf(state.representative_frame);
-            state.currentFrameIndex = repIndex >= 0 ? repIndex : 0;
-            state.isPurified = true;
+        function resetFrame(id) {
+            const state = itemStates.get(id);
+            const bestIndex = state.frames.indexOf(state.best);
+            state.currentFrameIndex = bestIndex >= 0 ? bestIndex : 0;
 
-            const itemEls = galleryEl.querySelectorAll('[data-id="' + clusterId + '"]');
-            itemEls.forEach(function(el) {
+            const itemEls = galleryEl.querySelectorAll('[data-id="' + id + '"]');
+            itemEls.forEach(function (el) {
                 const img = el.querySelector('img');
                 const frameName = state.frames[state.currentFrameIndex];
-                img.src = getImageUrl(clusterId, state.currentFrameIndex);
+                img.src = getImageUrl(id, state.currentFrameIndex);
                 img.alt = frameName;
                 const basenameEl = el.querySelector('.frame-basename');
                 if (basenameEl) {
                     basenameEl.textContent = frameName.replace(/\.[^.]+$/, '');
                 }
             });
-        }
-
-        function toggleDelete(clusterId) {
-            const state = itemStates.get(clusterId);
-            state.isDeleted = !state.isDeleted;
-
-            const itemEls = galleryEl.querySelectorAll('[data-id="' + clusterId + '"]');
-            itemEls.forEach(function(el) {
-                el.classList.toggle('marked-delete', state.isDeleted);
-            });
-
-            updateCounts();
-            if (currentFilter === 'deleted') {
-                render();
-            }
-        }
-
-        function filterView(filter) {
-            currentFilter = filter;
-            document.querySelectorAll('.btn-text').forEach(function(btn) {
-                btn.classList.remove('active');
-            });
-            const btnId = filterBtnMap[filter];
-            if (btnId) {
-                document.getElementById(btnId).classList.add('active');
-            }
-            if (filter !== 'all') {
-                showAllFrames = false;
-            }
-            render();
-        }
-
-        function toggleQuickMark() {
-            quickMarkMode = !quickMarkMode;
-            document.body.classList.toggle('quick-mark-mode', quickMarkMode);
-            document.getElementById('btn-quick').classList.toggle('active', quickMarkMode);
-            showStatus(quickMarkMode ? '快速标记模式已开启' : '快速标记模式已关闭');
         }
 
         function updateCounts() {
-            let total;
-            if (showAllFrames) {
-                total = Array.from(itemStates.values()).reduce(function(sum, s) {
-                    return sum + s.frames.length;
-                }, 0);
-            } else {
-                total = data.length;
-            }
-            const syn = data.filter(function(i) { return i.low_quality; }).length;
-            const del = Array.from(itemStates.values()).filter(function(s) { return s.isDeleted; }).length;
+            // 更新每个色块的标记数量
+            MARK_COLORS.forEach(function (mc) {
+                const count = Array.from(itemStates.values()).filter(function (s) {
+                    return s.markColor === mc.key;
+                }).length;
 
-            document.getElementById('count-all').textContent = total;
-            document.getElementById('count-syn').textContent = syn;
-            document.getElementById('count-del').textContent = del;
+                const btn = document.querySelector('.color-swatch[data-color="' + mc.key + '"]');
+                if (btn) {
+                    const inner = btn.querySelector('.swatch-inner');
+                    if (count > 0) {
+                        inner.textContent = count;
+                    } else {
+                        inner.textContent = '';
+                    }
+                }
+            });
         }
 
         function showStatus(msg) {
             statusEl.textContent = msg;
             if (statusTimer) clearTimeout(statusTimer);
             if (msg) {
-                statusTimer = setTimeout(function() {
+                statusTimer = setTimeout(function () {
                     if (statusEl.textContent === msg) {
                         statusEl.textContent = '';
                     }
@@ -803,11 +975,11 @@
 
         async function submitMarks() {
             const payload = [];
-            itemStates.forEach(function(state) {
+            itemStates.forEach(function (state) {
                 payload.push({
-                    id: state.cluster_id,
-                    url: getImageUrl(state.cluster_id),
-                    del: state.isDeleted
+                    id: state.id,
+                    url: getImageUrl(state.id),
+                    color: state.markColor || null
                 });
             });
 
@@ -826,22 +998,22 @@
             }
         }
 
-        document.addEventListener('mousedown', function() {
+        document.addEventListener('mousedown', function () {
             isPointerDown = true;
         });
-        document.addEventListener('mouseup', function() {
+        document.addEventListener('mouseup', function () {
             isPointerDown = false;
             lastHoveredId = null;
         });
-        document.addEventListener('touchstart', function() {
+        document.addEventListener('touchstart', function () {
             isPointerDown = true;
         }, { passive: true });
-        document.addEventListener('touchend', function() {
+        document.addEventListener('touchend', function () {
             isPointerDown = false;
             lastHoveredId = null;
         });
-        document.addEventListener('touchmove', function(e) {
-            if (!quickMarkMode || !isPointerDown) return;
+        document.addEventListener('touchmove', function (e) {
+            if (!markMode || !isPointerDown || !activeMarkColor) return;
             const touch = e.touches[0];
             const el = document.elementFromPoint(touch.clientX, touch.clientY);
             if (el) {
@@ -850,14 +1022,20 @@
                     const id = parseInt(item.dataset.id, 10);
                     if (lastHoveredId !== id) {
                         lastHoveredId = id;
-                        toggleDelete(id);
+                        if (activeMarkColor === 'erase') {
+                            setMarkColor(id, null);
+                        } else {
+                            setMarkColor(id, activeMarkColor);
+                        }
                     }
                 }
             }
         }, { passive: true });
 
         initDatasetSelect();
+        initColorToolbar();
         init();
     </script>
 </body>
+
 </html>

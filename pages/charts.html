@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-hans" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#282828" id="theme-color-meta">
+    <title>趋势数据面板</title>
+    <meta name="description" content="趋势数据可视化面板">
+    <script>
+        (function () {
+            const saved = localStorage.getItem('theme-preference');
+            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            let resolvedTheme;
+            let preference;
+
+            if (saved === 'dark' || saved === 'light' || saved === 'auto') {
+                preference = saved;
+            } else {
+                preference = 'auto';
+            }
+
+            if (preference === 'auto') {
+                resolvedTheme = systemDark ? 'dark' : 'light';
+            } else {
+                resolvedTheme = preference;
+            }
+
+            document.documentElement.setAttribute('data-theme', resolvedTheme);
+            document.documentElement.setAttribute('data-theme-preference', preference);
+
+            const meta = document.getElementById('theme-color-meta');
+            if (meta) {
+                meta.setAttribute('content', resolvedTheme === 'dark' ? '#282828' : '#fbf1c7');
+            }
+        })();
+    </script>
+    <style>
+        :root {
+            --font-family:
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                Roboto,
+                "Helvetica Neue",
+                "Noto Sans",
+                "Liberation Sans",
+                "Apple Color Emoji",
+                "Segoe UI Emoji",
+                "Segoe UI Symbol",
+                "Noto Color Emoji",
+                "Source Han Sans VF",
+                "Microsoft YaHei",
+                "PingFang SC",
+                "Hiragino Sans GB",
+                "WenQuanYi Micro Hei",
+                Arial,
+                sans-serif;
+
+            --font-family-monospace:
+                "JetBrains Mono",
+                "Liberation Mono",
+                "SF Mono",
+                Menlo,
+                Monaco,
+                Consolas,
+                "Source Han Sans VF",
+                "Microsoft YaHei",
+                "PingFang SC",
+                "Hiragino Sans GB",
+                monospace;
+
+            --transition-time: 0.2s;
+            --transition-time-slow: 0.3s;
+            --radius-sm: 2px;
+            --radius-md: 4px;
+            --breakpoint-sm: 576px;
+            --breakpoint-md: 768px;
+            --breakpoint-lg: 992px;
+            --breakpoint-xl: 1200px;
+
+            --color-primary: var(--green);
+            --color-secondary: var(--yellow);
+            --color-accent: var(--blue);
+            --color-success: var(--green);
+            --color-warning: var(--orange);
+            --color-error: var(--red);
+            --color-info: var(--blue);
+            --text-primary: var(--fg1);
+            --text-secondary: var(--fg-3);
+            --text-muted: var(--fg-4);
+            --text-inverse: var(--bg1);
+            --bg-body: var(--bg);
+            --bg-surface: var(--bg-s);
+            --bg-overlay: #0000007F;
+            --font-size-xs: 0.75rem;
+            --font-size-sm: 0.875rem;
+            --font-size-base: 1rem;
+            --font-size-md: 1.125rem;
+            --font-size-lg: 1.25rem;
+            --font-size-xl: 1.5rem;
+            font-size: 16px;
+        }
+
+        [data-theme="dark"] {
+            color-scheme: dark;
+            --bg_h: #1d2021;
+            --bg: #282828;
+            --bg_s: #32302f;
+            --bg1: #3c3836;
+            --bg2: #504945;
+            --bg3: #665c54;
+            --bg4: #7c6f64;
+            --fg: #fbf1c7;
+            --fg1: #ebdbb2;
+            --fg2: #d5c4a1;
+            --fg3: #bdae93;
+            --fg4: #a89984;
+            --red: #fb4934;
+            --green: #b8bb26;
+            --yellow: #fabd2f;
+            --blue: #83a598;
+            --purple: #d3869b;
+            --aqua: #8ec07c;
+            --gray: #928374;
+            --orange: #fe8019;
+            --red-dim: #cc2412;
+            --green-dim: #98971a;
+            --yellow-dim: #d79921;
+            --blue-dim: #458588;
+            --purple-dim: #b16286;
+            --aqua-dim: #689d6a;
+            --gray-dim: #a89984;
+            --orange-dim: #d65d0e;
+        }
+
+        [data-theme="light"] {
+            color-scheme: light;
+            --bg_h: #f9f5d7;
+            --bg: #fbf1c7;
+            --bg_s: #f2e5bc;
+            --bg1: #ebdbb2;
+            --bg2: #d5c4a1;
+            --bg3: #bdae93;
+            --bg4: #a89984;
+            --fg: #282828;
+            --fg1: #3c3836;
+            --fg2: #504945;
+            --fg3: #665c54;
+            --fg4: #7c6f64;
+            --red: #9d0006;
+            --green: #79740e;
+            --yellow: #b57614;
+            --blue: #076678;
+            --purple: #8f3f71;
+            --aqua: #427b58;
+            --orange: #af3a03;
+            --gray: #928374;
+            --red-dim: #cc2412;
+            --green-dim: #98971a;
+            --yellow-dim: #d79921;
+            --blue-dim: #458598;
+            --purple-dim: #b16286;
+            --aqua-dim: #689d6a;
+            --orange-dim: #d65d0e;
+            --gray-dim: #7c6f64;
+        }
+
+        a {
+            color: var(--blue);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--blue-dim);
+        }
+
+        a:visited {
+            color: var(--blue);
+        }
+
+        a:active {
+            color: var(--blue);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            -webkit-text-size-adjust: 100%;
+        }
+    </style>
+    <style>
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg);
+            color: var(--fg1);
+            line-height: 1.5;
+        }
+
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 1rem;
+            background-color: var(--bg_s);
+            border-bottom: 1px solid var(--bg2);
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chart-container {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #chart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .status-bar {
+            padding: 0.375rem 1rem;
+            background-color: var(--bg_s);
+            border-top: 1px solid var(--bg2);
+            font-size: var(--font-size-sm);
+            color: var(--fg4);
+            flex-shrink: 0;
+        }
+
+        .control-select {
+            font-family: var(--font-family);
+            font-size: var(--font-size-sm);
+            padding: 0.375rem 2rem 0.375rem 0.75rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--bg3);
+            background-color: var(--bg);
+            color: var(--fg1);
+            outline: none;
+            cursor: pointer;
+            transition: border-color var(--transition-time);
+            appearance: none;
+            -webkit-appearance: none;
+            min-height: 2rem;
+            line-height: 1.25;
+        }
+
+        .control-select:focus {
+            border-color: var(--color-primary);
+        }
+
+        .btn-text {
+            font-family: var(--font-family);
+            font-size: var(--font-size-sm);
+            padding: 0.375rem 0.75rem;
+            border: none;
+            background: none;
+            color: var(--fg1);
+            cursor: pointer;
+            border-radius: var(--radius-md);
+            transition: color var(--transition-time);
+            min-height: 2rem;
+            line-height: 1.25;
+        }
+
+        .btn-text:hover {
+            color: var(--fg3);
+        }
+
+        .btn-text:active {
+            color: var(--fg4);
+        }
+
+        .btn-text.active {
+            color: var(--color-primary);
+        }
+
+        .btn-outline {
+            font-family: var(--font-family);
+            font-size: var(--font-size-sm);
+            padding: 0.375rem 0.75rem;
+            border: 1px solid var(--color-primary);
+            background-color: transparent;
+            color: var(--color-primary);
+            cursor: pointer;
+            border-radius: var(--radius-md);
+            transition: background-color var(--transition-time);
+            min-height: 2rem;
+            line-height: 1.25;
+        }
+
+        .btn-outline:hover {
+            background-color: var(--bg1);
+        }
+
+        .btn-outline:active {
+            background-color: var(--bg2);
+        }
+
+        .btn-outline:focus,
+        .btn-text:focus {
+            outline: 1px solid var(--color-primary);
+            outline-offset: 1px;
+        }
+
+        @media (max-width: 576px) {
+            .toolbar {
+                padding: 0.5rem;
+            }
+            .status-bar {
+                padding: 0.375rem 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header class="toolbar">
+            <div class="toolbar-group">
+                <select id="sheetSelect" class="control-select"></select>
+                <button id="refreshBtn" class="btn-outline">刷新</button>
+            </div>
+            <div class="toolbar-group">
+                <button id="btnAggregate" class="btn-text">聚合</button>
+                <button id="btnSeparate" class="btn-text active">分离</button>
+            </div>
+        </header>
+        <main class="chart-container">
+            <div id="chart"></div>
+        </main>
+        <footer class="status-bar">
+            <span id="statusText">就绪</span>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script>
+        const sheets = [
+            "00_collect",
+        ];
+
+        let secreted = 0;
+        let currentData = null;
+        let isAggregated = false;
+
+        const chartDom = document.getElementById('chart');
+        const chart = echarts.init(chartDom, null, { renderer: 'canvas' });
+        const statusText = document.getElementById('statusText');
+        const sheetSelect = document.getElementById('sheetSelect');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const btnAggregate = document.getElementById('btnAggregate');
+        const btnSeparate = document.getElementById('btnSeparate');
+
+        function getCssVar(name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        }
+
+        function getThemeColors() {
+            return [
+                getCssVar('--red'),
+                getCssVar('--blue'),
+                getCssVar('--green'),
+                getCssVar('--yellow'),
+                getCssVar('--purple'),
+                getCssVar('--aqua'),
+                getCssVar('--orange'),
+                getCssVar('--gray')
+            ];
+        }
+
+        function parseCSV(text) {
+            const lines = text.trim().split(/\r?\n/);
+            if (lines.length === 0) return null;
+
+            const parseLine = (line) => {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        if (inQuotes && line[i + 1] === '"') {
+                            current += '"';
+                            i++;
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                result.push(current.trim());
+                return result;
+            };
+
+            const headers = parseLine(lines[0]);
+            const labels = [];
+            const series = [];
+
+            for (let i = 1; i < headers.length; i++) {
+                series.push({ name: headers[i], data: [] });
+            }
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = parseLine(lines[i]);
+                labels.push(cols[0]);
+                for (let j = 1; j < cols.length && j <= series.length; j++) {
+                    series[j - 1].data.push(parseFloat(cols[j]) || 0);
+                }
+            }
+
+            return { labels, series };
+        }
+
+        function buildOption(data) {
+            const colors = getThemeColors();
+            const bg = getCssVar('--bg');
+            const bg_s = getCssVar('--bg_s');
+            const bg1 = getCssVar('--bg1');
+            const bg2 = getCssVar('--bg2');
+            const bg3 = getCssVar('--bg3');
+            const fg1 = getCssVar('--fg1');
+            const fg3 = getCssVar('--fg3');
+            const fg4 = getCssVar('--fg4');
+            const primary = getCssVar('--color-primary');
+
+            const labelInterval = Math.max(1, Math.floor(data.labels.length / 10));
+            const commonXAxis = {
+                type: 'category',
+                data: data.labels,
+                boundaryGap: false,
+                axisLine: { lineStyle: { color: bg3 } },
+                axisLabel: {
+                    color: fg3,
+                    fontFamily: 'var(--font-family)',
+                    fontSize: 11,
+                    interval: labelInterval
+                },
+                axisTick: { show: false }
+            };
+            const commonYAxis = {
+                type: 'value',
+                axisLine: { show: false },
+                axisTick: { show: false },
+                splitLine: {
+                    lineStyle: {
+                        color: bg2,
+                        type: [4, 4]
+                    }
+                },
+                axisLabel: {
+                    color: fg3,
+                    fontFamily: 'var(--font-family)',
+                    fontSize: 11
+                }
+            };
+            const commonDataZoom = [
+                {
+                    type: 'inside',
+                    start: 0,
+                    end: 100,
+                    zoomOnMouseWheel: true,
+                    moveOnMouseMove: true
+                },
+                {
+                    type: 'slider',
+                    start: 0,
+                    end: 100,
+                    height: 20,
+                    bottom: 4,
+                    left: 48,
+                    right: 16,
+                    borderColor: bg2,
+                    backgroundColor: bg,
+                    fillerColor: bg3 + '66',
+                    handleStyle: {
+                        color: primary,
+                        borderColor: primary
+                    },
+                    textStyle: {
+                        color: fg3,
+                        fontFamily: 'var(--font-family)',
+                        fontSize: 11
+                    },
+                    dataBackground: {
+                        lineStyle: { color: bg3, width: 1 },
+                        areaStyle: { color: bg3 }
+                    },
+                    selectedDataBackground: {
+                        lineStyle: { color: primary, width: 1 },
+                        areaStyle: { color: primary }
+                    }
+                }
+            ];
+
+            if (isAggregated) {
+                const series = data.series.map((s, idx) => ({
+                    name: s.name,
+                    type: 'line',
+                    data: s.data,
+                    smooth: true,
+                    showSymbol: false,
+                    sampling: 'lttb',
+                    lineStyle: { width: 1.5 },
+                    itemStyle: { color: colors[idx % colors.length] },
+                    emphasis: { focus: 'none' },
+                    large: true,
+                }));
+
+                return {
+                    backgroundColor: 'transparent',
+                    animation: false,
+                    tooltip: {
+                        trigger: 'axis',
+                        confine: true,
+                        backgroundColor: bg_s,
+                        borderColor: bg2,
+                        textStyle: {
+                            color: fg1,
+                            fontFamily: 'var(--font-family)',
+                            fontSize: 12
+                        },
+                        axisPointer: {
+                            type: 'line',
+                            lineStyle: { color: bg3, width: 1 }
+                        }
+                    },
+                    legend: {
+                        show: true,
+                        type: 'scroll',
+                        top: 4,
+                        left: 8,
+                        right: 120,
+                        textStyle: {
+                            color: fg1,
+                            fontFamily: 'var(--font-family)',
+                            fontSize: 12
+                        },
+                        pageIconColor: primary,
+                        pageTextStyle: { color: fg3 },
+                        pageIconInactiveColor: bg3
+                    },
+                    grid: {
+                        left: 8,
+                        right: 12,
+                        top: 36,
+                        bottom: 48,
+                        containLabel: true
+                    },
+                    xAxis: commonXAxis,
+                    yAxis: commonYAxis,
+                    dataZoom: commonDataZoom,
+                    series: series
+                };
+            } else {
+                const n = data.series.length;
+                const gap = 2;
+                const singleHeight = (100 - gap * (n - 1)) / n;
+                const grids = [];
+                const xAxes = [];
+                const yAxes = [];
+                const series = [];
+                const dataZooms = [];
+
+                for (let i = 0; i < n; i++) {
+                    const top = i * (singleHeight + gap);
+                    grids.push({
+                        left: 8,
+                        right: 12,
+                        top: top + '%',
+                        height: singleHeight + '%',
+                        containLabel: true
+                    });
+                    xAxes.push({
+                        ...commonXAxis,
+                        gridIndex: i,
+                        axisLabel: {
+                            ...commonXAxis.axisLabel,
+                            show: i === n - 1
+                        }
+                    });
+                    yAxes.push({
+                        ...commonYAxis,
+                        gridIndex: i,
+                        name: data.series[i].name,
+                        nameLocation: 'end',
+                        nameTextStyle: {
+                            color: colors[i % colors.length],
+                            fontFamily: 'var(--font-family)',
+                            fontSize: 11,
+                            fontWeight: 'bold'
+                        }
+                    });
+                    series.push({
+                        name: data.series[i].name,
+                        type: 'line',
+                        data: data.series[i].data,
+                        xAxisIndex: i,
+                        yAxisIndex: i,
+                        smooth: true,
+                        showSymbol: false,
+                        sampling: 'lttb',
+                        lineStyle: { width: 1.5, color: colors[i % colors.length] },
+                        itemStyle: { color: colors[i % colors.length] },
+                    });
+                }
+
+                dataZooms.push({
+                    type: 'inside',
+                    xAxisIndex: Array.from({ length: n }, (_, i) => i),
+                    start: 0,
+                    end: 100,
+                    zoomOnMouseWheel: true,
+                    moveOnMouseMove: true
+                });
+
+                return {
+                    backgroundColor: 'transparent',
+                    animation: false,
+                    tooltip: {
+                        trigger: 'axis',
+                        confine: true,
+                        backgroundColor: bg_s,
+                        borderColor: bg2,
+                        textStyle: {
+                            color: fg1,
+                            fontFamily: 'var(--font-family)',
+                            fontSize: 12
+                        },
+                        axisPointer: {
+                            type: 'line',
+                            lineStyle: { color: bg3, width: 1 }
+                        }
+                    },
+                    grid: grids,
+                    xAxis: xAxes,
+                    yAxis: yAxes,
+                    dataZoom: dataZooms,
+                    series: series
+                };
+            }
+        }
+
+        function renderChart(data) {
+            if (!data) return;
+            const option = buildOption(data);
+            chart.setOption(option, true);
+        }
+
+        async function loadSheet(name) {
+            try {
+                statusText.textContent = '加载中...';
+                const response = await fetch(`/cache/csv/${name}.csv`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const text = await response.text();
+                currentData = parseCSV(text);
+                if (currentData) {
+                    renderChart(currentData);
+                    statusText.textContent = `已加载 ${name}，${currentData.labels.length} 行，${currentData.series.length} 列`;
+                } else {
+                    statusText.textContent = '数据解析失败';
+                }
+            } catch (err) {
+                statusText.textContent = '错误: ' + err.message;
+            }
+        }
+
+        function initControls() {
+            sheets.forEach((s, i) => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                sheetSelect.appendChild(opt);
+            });
+            sheetSelect.value = sheets[secreted];
+
+            sheetSelect.addEventListener('change', (e) => {
+                secreted = sheets.indexOf(e.target.value);
+                loadSheet(e.target.value);
+            });
+
+            refreshBtn.addEventListener('click', () => {
+                loadSheet(sheets[secreted]);
+            });
+
+            btnAggregate.addEventListener('click', () => {
+                if (isAggregated) return;
+                isAggregated = true;
+                btnAggregate.classList.add('active');
+                btnSeparate.classList.remove('active');
+                if (currentData) renderChart(currentData);
+            });
+
+            btnSeparate.addEventListener('click', () => {
+                if (!isAggregated) return;
+                isAggregated = false;
+                btnSeparate.classList.add('active');
+                btnAggregate.classList.remove('active');
+                if (currentData) renderChart(currentData);
+            });
+        }
+
+        function observeTheme() {
+            const observer = new MutationObserver((mutations) => {
+                for (const m of mutations) {
+                    if (m.attributeName === 'data-theme') {
+                        if (currentData) renderChart(currentData);
+                        break;
+                    }
+                }
+            });
+            observer.observe(document.documentElement, { attributes: true });
+        }
+
+        window.addEventListener('resize', () => chart.resize());
+
+        initControls();
+        observeTheme();
+        loadSheet(sheets[secreted]);
+    </script>
+</body>
+</html>

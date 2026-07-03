@@ -8,6 +8,8 @@ from common import *
 FRAME_GLOB = "cache/frames/*.png"
 CRUSH_DIR = 'cache/crush-frames'
 OUTPUT_PATH = "cache/00_collect.json"
+GOOD_PATH = "cache/00_good.json"
+MISS_PATH = "cache/00_miss.json"
 THRESHOLD = 0.04 # 正常多数分布在 0.01~0.035
 
 
@@ -147,31 +149,40 @@ def process():
     frames = sorted(glob.glob(FRAME_GLOB))
     logger.info(f"collect start: found {len(frames)} frames.")
 
-    clusters = [{"step": "retain", "frames": []},
-                {"step": "abandon", "frames": []}]
+    good = ClusterTable()
+    miss = ClusterTable()
+    # clusters = [{"step": "retain", "frames": []},
+    #             {"step": "abandon", "frames": []}]
 
     os.makedirs(CRUSH_DIR, exist_ok=True)
-
+    t = Table('00_collect')
     for path in frames:
         name = os.path.basename(path)
         cimg = crush(path, os.path.join(CRUSH_DIR, name))
         score, details = evaluate_darkness(cimg)
+        c = good if score <= THRESHOLD else miss
+        c.add_frame(name)
+
         logger.debug(f'{name} {score=} {details=}')
-        i = 0 if score <= THRESHOLD else 1
-        clusters[i]['frames'].append(name)
+        t.insert({'ts':os.path.splitext(name)[0], 'score':score, **details})
+    t.close()
 
-    for i in range(2):
-        clusters[i]['cluster_id'] = i
-        clusters[i]['max_laplacian_var'] = 0
-        clusters[i]['low_quality'] = False
-        if clusters[i]['frames']:
-            clusters[i]['representative_frame'] = clusters[0]['frames'][0]
 
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-        json.dump(clusters, f, ensure_ascii=False, indent=2)
+    # for i in range(2):
+    #     clusters[i]['cluster_id'] = i
+    #     clusters[i]['max_laplacian_var'] = 0
+    #     clusters[i]['low_quality'] = False
+    #     if clusters[i]['frames']:
+    #         clusters[i]['representative_frame'] = clusters[0]['frames'][0]
 
-    logger.info(f"collect done: saved -> {OUTPUT_PATH}")
+    os.makedirs(os.path.dirname(GOOD_PATH), exist_ok=True)
+    os.makedirs(os.path.dirname(MISS_PATH), exist_ok=True)
+    good.save(GOOD_PATH)
+    miss.save(MISS_PATH)
+    # with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
+    #     json.dump(clusters, f, ensure_ascii=False, indent=2)
+
+    logger.info(f"collect done: saved -> {GOOD_PATH}; {MISS_PATH}")
 
 
 # ==================== 使用示例 ====================
