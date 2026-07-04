@@ -332,3 +332,6 @@ def flush_submit():
         names.append(name)
     _cluster_tables = []
     logger.info(f'saved {names}')
+
+
+logger.debug()
