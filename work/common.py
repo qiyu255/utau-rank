@@ -176,6 +176,8 @@ def crop_image(img, crop_params) -> np.ndarray:
 
 class Sheet:
     def __init__(self, name, mode='w'):
+        if type(name) == tuple:
+            name = '_'.join(name)
         os.makedirs('cache/csv', exist_ok=True)
         self._f = open(f'cache/csv/{name}.csv', mode,
                        newline='', encoding='utf-8')
@@ -194,30 +196,13 @@ class Sheet:
         self._f.close()
 
 
-# @dataclass
-# class Cluster:
-#     id: int = field(default=0)
-#     best: str = field(default='')
-#     frames: list[str] = field(default_factory=list)
-#     indicator: defaultdict[str, float] = field(
-#         default_factory=lambda: defaultdict(lambda:0)
-#     )
+_sheets = {}
 
 
-# class ClusterTable:
-#     def __init__(self):
-#         self._data:list[Cluster] = []
-#         self._seq = 0
-
-#     def add_cluster(self,cluster:Cluster):
-#         self._data.append(cluster)
-#         self._seq = cluster.id
-
-#     def add_frame(self, frame:str, indicator={}):
-#         cluster = Cluster(self._seq+1)
-#         cluster.best = frame
-#         cluster.frames[0] = frame
-#         cluster.indicator = indicator
+def submit_sheet(name: str, row: dict):
+    if name not in _sheets:
+        _sheets[name] = Sheet(name)
+    _sheets[name].insert(row)
 
 
 @dataclass
@@ -225,9 +210,7 @@ class Cluster:
     id: int = field(default=0)
     best: str = field(default='')
     frames: list[str] = field(default_factory=list)
-    indicator: defaultdict[str, float] = field(
-        default_factory=lambda: defaultdict(float)
-    )
+    indicator: dict[str, float] = field(default_factory=dict)
 
     def __str__(self) -> str:
         return (f"Cluster(id={self.id}, best='{self.best}', "
@@ -238,15 +221,11 @@ class Cluster:
                 f"frames={self.frames!r}, indicator={self.indicator!r})")
 
     def to_dict(self) -> dict:
-        """转换为普通字典，indicator 转为普通 dict"""
-        d = asdict(self)
-        d['indicator'] = dict(d['indicator'])
-        return d
+        """转换为普通字典"""
+        return asdict(self)
 
     @staticmethod
     def from_dict(data: dict) -> 'Cluster':
-        # 将普通 dict 转为 defaultdict
-        data['indicator'] = defaultdict(float, data.get('indicator', {}))
         return Cluster(**data)
 
     def to_json(self, **kwargs) -> str:
@@ -254,22 +233,23 @@ class Cluster:
 
 
 class ClusterTable:
-    def __init__(self):
+    def __init__(self, file_path='cache/cluster.json'):
         self._data: list[Cluster] = []
         self._seq = 0
+        self.file_path = file_path
 
     def add_cluster(self, cluster: Cluster) -> None:
         self._data.append(cluster)
         self._seq = cluster.id
 
-    def add_frame(self, frame: str, indicator: dict = {}) -> None:
+    def add_frame(self, frame: str, alt=[], indicator: dict = {}) -> None:
         if indicator is None:
             indicator = {}
         cluster = Cluster(
             id=self._seq + 1,
             best=frame,
-            frames=[frame],
-            indicator=defaultdict(float, indicator)
+            frames=alt or [frame],
+            indicator=indicator
         )
         self._data.append(cluster)
         self._seq = cluster.id
@@ -279,6 +259,16 @@ class ClusterTable:
 
     def __repr__(self) -> str:
         return f"ClusterTable(_data={self._data!r}, _seq={self._seq})"
+
+    def __len__(self):
+        return len(self._data)
+
+    def __getitem__(self, index):
+        return self._data[index]
+
+    def __iter__(self):
+        for cluster in self._data:
+            yield cluster
 
     def to_list(self) -> list[dict]:
         return [c.to_dict() for c in self._data]
@@ -306,8 +296,38 @@ class ClusterTable:
         res = json.load(f)
         f.close()
         return ClusterTable.from_list(res)
-    
-    def save(self, file_path):
-        f = open(file_path, 'w', encoding='utf-8')
+
+    def save(self, file_path=''):
+        fp =  file_path or self.file_path
+        f = open(fp, 'w', encoding='utf-8')
         f.write(self.to_json())
         f.close
+
+
+_cluster_tables = {}
+
+
+def submit_frame(name, best, alt=[], indicator={}):
+    if name not in _cluster_tables:
+        _cluster_tables[name] = ClusterTable()
+    _cluster_tables[name].add_frame(best, alt, indicator)
+
+
+def flush_submit():
+    global _sheets, _cluster_tables
+    names = []
+    for name, sheet in _sheets.items():
+        if type(name) == tuple:
+            name = '_'.join(name)
+        sheet.close()
+        names.append(name)
+    _sheets = {}
+
+    for name, cluster in _cluster_tables.items():
+        if type(name) == tuple:
+            name = '_'.join(name) + '.json'
+        name = 'cache/'+name
+        cluster.save(name)
+        names.append(name)
+    _cluster_tables = []
+    logger.info(f'saved {names}')
