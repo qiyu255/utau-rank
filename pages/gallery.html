@@ -581,6 +581,9 @@
         <div class="toolbar-group">
             <select id="dataset-select" class="dataset-select" onchange="changeDataset(this.value)"></select>
         </div>
+        <div class="toolbar-group">
+            <select id="prefix-select" class="dataset-select" onchange="changePrefix(this.value)"></select>
+        </div>
         <div class="toolbar-group" id="color-toolbar">
             <!-- 色块按钮由 JS 动态生成 -->
         </div>
@@ -595,6 +598,7 @@
 
     <script>
         const items = [
+            '02_cluster',
             '01_sift_hit', '01_sift_miss',
             '00_good',
             '00_miss',
@@ -602,6 +606,15 @@
             '02_purified',
         ];
         let selected = 0;
+
+        // ===== 可配置：图片 URL 前缀 =====
+        const prefixes = [
+            {name: 'default', baseURL: '/cache/frames'},
+            {name: 'crush', baseURL: '/cache/crush-frames'},
+            {name: 'purified', baseURL: '/cache/purified'},
+            {name: 'sample', baseURL: '/cache/sample'},
+        ];
+        let currentPrefix = prefixes[1].baseURL;
 
         let data = [];
         let currentFilter = 'all';
@@ -633,6 +646,18 @@
                 option.value = index;
                 option.textContent = item;
                 if (index === selected) option.selected = true;
+                select.appendChild(option);
+            });
+        }
+
+        function initPrefixSelect() {
+            const select = document.getElementById('prefix-select');
+            select.innerHTML = '';
+            prefixes.forEach(function (prefix) {
+                const option = document.createElement('option');
+                option.value = prefix.baseURL;
+                option.textContent = prefix.name;
+                if (prefix.baseURL === currentPrefix) option.selected = true;
                 select.appendChild(option);
             });
         }
@@ -701,6 +726,18 @@
             init();
         }
 
+        function changePrefix(baseURL) {
+            currentPrefix = baseURL;
+            // 刷新当前已渲染图片的 src
+            const itemEls = galleryEl.querySelectorAll('.item');
+            itemEls.forEach(function (el) {
+                const id = parseInt(el.dataset.id, 10);
+                const img = el.querySelector('img');
+                img.src = getImageUrl(id);
+            });
+            showStatus('前缀已切换: ' + baseURL);
+        }
+
         function isLowQuality(item) {
             return item.indicator && item.indicator.bad !== undefined && item.indicator.bad > 0.5;
         }
@@ -737,11 +774,7 @@
         function getImageUrl(id, frameIndex) {
             const state = itemStates.get(id);
             const frame = state.frames[frameIndex !== undefined ? frameIndex : state.currentFrameIndex];
-            const isBestFrame = frame === state.best;
-            if (isBestFrame) {
-                return '/cache/purified/' + frame;
-            }
-            return '/cache/frames/' + frame;
+            return currentPrefix + '/' + frame;
         }
 
         function render() {
@@ -771,15 +804,6 @@
                     img.alt = frameName;
                     img.loading = 'lazy';
                     img.draggable = false;
-                    img.onerror = function () {
-                        const currentSrc = this.src;
-                        if (currentSrc.includes('/cache/purified/')) {
-                            this.src = currentSrc.replace('/cache/purified/', '/cache/frames/');
-                        } else {
-                            this.style.minHeight = '120px';
-                            this.alt = '加载失败';
-                        }
-                    };
 
                     const overlay = document.createElement('div');
                     overlay.className = 'item-overlay';
@@ -1033,6 +1057,7 @@
         }, { passive: true });
 
         initDatasetSelect();
+        initPrefixSelect();
         initColorToolbar();
         init();
     </script>

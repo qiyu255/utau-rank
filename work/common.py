@@ -240,7 +240,7 @@ class ClusterTable:
 
     def add_cluster(self, cluster: Cluster) -> None:
         self._data.append(cluster)
-        self._seq = cluster.id
+        self._seq = self._seq +1
 
     def add_frame(self, frame: str, alt=[], indicator: dict = {}) -> None:
         if indicator is None:
@@ -253,6 +253,7 @@ class ClusterTable:
         )
         self._data.append(cluster)
         self._seq = cluster.id
+ 
 
     def __str__(self) -> str:
         return f"ClusterTable(total_clusters={len(self._data)})"
