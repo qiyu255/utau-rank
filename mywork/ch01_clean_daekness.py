@@ -6,7 +6,7 @@ from pathlib import Path
 from common import *
 
 TASK_NAME = Path(__file__).stem
-MASK_BY = 0.035
+MASK_BY = 0.03445
 FIDLE_NAMES = ['cost',
                'gray_mean',
                'dark_ratio',
