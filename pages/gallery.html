@@ -598,12 +598,21 @@
 
     <script>
         const items = [
-            '02_cluster',
-            '01_sift_hit', '01_sift_miss',
-            '00_good',
-            '00_miss',
-            '01_cluster',
-            '02_purified',
+            'ch03_dedup',
+            'ch04_group_c0',
+            'ch04_group_c1',
+            'ch04_group_c2',
+            'ch04_group_c3',
+            'ch04_group_c4',
+  
+            'ch02_clean_miss_good',
+            'ch02_clean_miss_bad',
+            'ch01_clean_daekness_good',
+            'ch01_clean_daekness_bad',
+            // '00_good',
+            // '00_miss',
+            // '01_cluster',
+            // '02_purified',
         ];
         let selected = 0;
 
@@ -745,7 +754,7 @@
         async function init() {
             showStatus('初始化中...');
             try {
-                const res = await fetch('/cache/' + items[selected] + '.json');
+                const res = await fetch('/cache/result/' + items[selected] + '.json');
                 if (!res.ok) throw new Error('加载失败: ' + res.status);
                 data = await res.json();
                 itemStates.clear();
