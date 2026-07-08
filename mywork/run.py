@@ -16,11 +16,11 @@ pipeline = [
     ch01_clean_daekness,
     ch02_clean_miss,
     ch03_dedup,
-    # ch04_group,
+    ch04_group,
 ]
 
 def main():
-    start = 3
+    start = 4
     if start:
         with open(CACHE_DIR/(Path(pipeline[start-1].__file__)).stem, 'rb') as f:
             param, ctx = pickle.load(f)

@@ -145,7 +145,18 @@ class Store:
             "indicator": {}} for i, v in enumerate(data)]
         self.gallery(name, data)
 
-    def clusters(self, name, clus):
+    def clusters(self, name, paths, slices, bests):
+        items = []
+        for i, s in enumerate(slices):
+            items.append({
+                'id': i+1,
+                'best': paths[bests[i]],
+                'frames': paths[s],
+                'indicator': {}
+            })
+        self.gallery(name, items)
+
+    def clusters_old(self, name, clus):
         items = []
         for i, c in enumerate(clus):
             item = {
@@ -157,6 +168,20 @@ class Store:
             for p in c:
                 item['frames'].append(Path(p).name)
             item["best"] = item['frames'][0]
+            items.append(item)
+        self.gallery(name, items)
+
+    def bests(self, name, bests, clus):
+        items = []
+        for i, c in enumerate(clus):
+            item = {
+                'id': i+1,
+                'best': Path(bests[i]).name,
+                'frames': [],
+                'indicator': {}
+            }
+            for p in c:
+                item['frames'].append(Path(p).name)
             items.append(item)
         self.gallery(name, items)
 
