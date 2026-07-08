@@ -11,7 +11,7 @@ DIFF_BIN_THRESH = 25
 MORPH_KERNEL = 1
 SSIM_WINDOW = 3
 SSIM_SIGMA = 1.5
-CLOUMNS = ['sim', 'dsim', 'dsim_abs', 'dsim_thresh',
+CLOUMNS = ['sim', 'diff_sim', 'absdiff',
            'ssim', 'l', 'c', 's', 'mu', 'sigma']
 
 
@@ -59,19 +59,18 @@ def diff(rst, img1, img2):
     m = cv2.morphologyEx(t, cv2.MORPH_OPEN, k)
 
     rst[0] = 1-np.count_nonzero(m) / m.size
-    rst[1] = 1-d.mean() / 255
-    rst[2] = 1-t.mean() / 255
+    rst[1] = d.mean() / 255
 
 
 def analyze(image_paths, window) -> np.ndarray:
-    stats = np.empty((len(image_paths), 10), dtype=np.float64)
-    stats[0] = np.zeros(10, dtype=np.float64)
+    stats = np.empty((len(image_paths), 9), dtype=np.float64)
+    stats[0] = np.zeros(9, dtype=np.float64)
     last = cv2.imread(image_paths[0], cv2.IMREAD_GRAYSCALE)
     for i in range(1, len(image_paths)):
         current = cv2.imread(image_paths[i], cv2.IMREAD_GRAYSCALE)
-        diff(stats[i, 1:4], current, last)
-        ssim(stats[i, 4:], current, last, window)
-        stats[i][0] = DIFF_WEIGHT * stats[i][1] + SSIM_WEIGHT * stats[i][4]
+        diff(stats[i, 1:3], current, last)
+        ssim(stats[i, 3:], current, last, window)
+        stats[i][0] = DIFF_WEIGHT * stats[i][1] + SSIM_WEIGHT * stats[i][3]
         last = current
     return stats
 
