@@ -143,13 +143,26 @@ class Store:
             "best": v,
             "frames": [v],
             "indicator": {}} for i, v in enumerate(data)]
-        self.clusters(name, data)
+        self.gallery(name, data)
 
-    def clusters(self, name, data):
+    def clusters(self, name, clus):
+        items = []
+        for i, c in enumerate(clus):
+            item = {
+                'id': i+1,
+                'best': '',
+                'frames': [],
+                'indicator': {}
+            }
+            for p in c:
+                item['frames'].append(Path(p).name)
+            item["best"] = item['frames'][0]
+            items.append(item)
+        self.gallery(name, items)
+
+    def gallery(self, name, data):
         with open(Store.RESULT_DIR / f'{name}.json', 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, default=lambda x: str(x))
-
-    
 
 
 @dataclass
@@ -160,4 +173,3 @@ class Context:
 
 logger = setup_logger()
 store = Store()
-

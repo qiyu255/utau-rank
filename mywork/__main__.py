@@ -7,16 +7,14 @@ logger.info('hello %s', __package__)
 logger.info('hello %s', Path(__file__).stem)
 
 
-m = np.empty((3, 2), np.int8)
+def proc(view, n):
+    print(view)
+    view[0]+=n
+    view[1]+=n
+    view[2]+=n
+
+m = np.ones((10,5),dtype=np.float64)
+
+proc(m[0, 1:4], 2)
 
 print(m)
-
-# 2. 预设字段名
-preset_columns = ['feature_1', 'feature_2', 'feature_3']
-# 3. 预设 ID 列
-preset_ids = ['i', '3'] # 生成 1001 到 1005 的 ID
-# 4. 加载矩阵并设置预设字段名和 ID 列
-df = pd.DataFrame(data=m, index=preset_ids, columns=preset_columns)
-print(df)
-
-
