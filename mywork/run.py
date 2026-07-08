@@ -4,7 +4,7 @@ import pickle
 import ch00_ready
 import ch01_clean_daekness
 import ch02_clean_miss
-import ch03_dedup
+import ch03_clean_same
 import ch04_group
 from common import *
 
@@ -15,7 +15,7 @@ pipeline = [
     ch00_ready,
     ch01_clean_daekness,
     ch02_clean_miss,
-    ch03_dedup,
+    ch03_clean_same,
     ch04_group,
 ]
 
