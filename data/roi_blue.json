@@ -1,0 +1,123 @@
+{
+  "boxes": [
+    {
+      "id": 1,
+      "name": "rank",
+      "x": 75,
+      "y": 2,
+      "w": 96,
+      "h": 58,
+      "color": 0
+    },
+    {
+      "id": 2,
+      "name": "total",
+      "x": 75,
+      "y": 73,
+      "w": 97,
+      "h": 35,
+      "color": 0
+    },
+    {
+      "id": 3,
+      "name": "view ",
+      "x": 75,
+      "y": 124,
+      "w": 97,
+      "h": 28,
+      "color": 0
+    },
+    {
+      "id": 4,
+      "name": "comment",
+      "x": 107,
+      "y": 163,
+      "w": 65,
+      "h": 28,
+      "color": 3
+    },
+    {
+      "id": 5,
+      "name": "comment_rate",
+      "x": 73,
+      "y": 161,
+      "w": 33,
+      "h": 8,
+      "color": 4
+    },
+    {
+      "id": 6,
+      "name": "mylist",
+      "x": 107,
+      "y": 205,
+      "w": 65,
+      "h": 28,
+      "color": 3
+    },
+    {
+      "id": 7,
+      "name": "mylist_mul",
+      "x": 73,
+      "y": 203,
+      "w": 33,
+      "h": 7,
+      "color": 4
+    },
+    {
+      "id": 8,
+      "name": "mylist_rate",
+      "x": 73,
+      "y": 210,
+      "w": 33,
+      "h": 8,
+      "color": 4
+    },
+    {
+      "id": 9,
+      "name": "date",
+      "x": 75,
+      "y": 246,
+      "w": 96,
+      "h": 30,
+      "color": 8
+    },
+    {
+      "id": 10,
+      "name": "id",
+      "x": 75,
+      "y": 290,
+      "w": 97,
+      "h": 20,
+      "color": 8
+    },
+    {
+      "id": 11,
+      "name": "title",
+      "x": 47,
+      "y": 2,
+      "w": 22,
+      "h": 510,
+      "color": 10
+    },
+    {
+      "id": 12,
+      "name": "library",
+      "x": 0,
+      "y": 0,
+      "w": 35,
+      "h": 310,
+      "color": 10
+    },
+    {
+      "id": 13,
+      "name": "author",
+      "x": 0,
+      "y": 316,
+      "w": 35,
+      "h": 196,
+      "color": 10
+    }
+  ],
+  "referenceWidth": 172,
+  "referenceHeight": 512
+}
