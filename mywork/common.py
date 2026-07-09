@@ -188,6 +188,11 @@ class Store:
     def gallery(self, name, data):
         with open(Store.RESULT_DIR / f'{name}.json', 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, default=lambda x: str(x))
+    
+    def json(self, path, data):
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, default=lambda x: str(x))
+
 
 
 @dataclass

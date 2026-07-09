@@ -6,6 +6,7 @@ import ch01_clean_daekness
 import ch02_clean_miss
 import ch03_clean_same
 import ch04_group
+import ch05_take
 from common import *
 
 CACHE_DIR = Path('cache/.pickle')
@@ -17,10 +18,11 @@ pipeline = [
     ch02_clean_miss,
     ch03_clean_same,
     ch04_group,
+    ch05_take,
 ]
 
 def main():
-    start = 4
+    start = -1
     if start:
         with open(CACHE_DIR/(Path(pipeline[start-1].__file__)).stem, 'rb') as f:
             param, ctx = pickle.load(f)
