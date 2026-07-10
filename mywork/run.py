@@ -21,8 +21,8 @@ pipeline = [
     ch05_take,
 ]
 
-def main():
-    start = -1
+def main(start=0):
+    # start = -1
     if start:
         with open(CACHE_DIR/(Path(pipeline[start-1].__file__)).stem, 'rb') as f:
             param, ctx = pickle.load(f)
