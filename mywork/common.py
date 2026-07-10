@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import cv2
 from pathlib import Path
+import math
 
 
 @lru_cache(maxsize=None)
@@ -83,6 +84,56 @@ def crop(img, box) -> np.ndarray:
         )
 
     return img[y:y+h, x:x+w]
+
+def padding(img, px, py, bg):
+    return cv2.copyMakeBorder(
+        img,
+        px, px, py, py,
+        cv2.BORDER_CONSTANT,
+        value=bg
+    )
+
+
+def grid_layout(images, bg, fg, gap=0, cols=0):
+    n = len(images)
+    h, w = images[0].shape[:2]
+    channels = images[0].shape[2] if images[0].ndim == 3 else 0
+
+    if cols == 0:
+        best = (math.inf, 0, 0)
+        for c in range(1, n + 1):
+            r = math.ceil(n / c)
+            last = n % c
+            if last != 0 and last < c * 0.5:
+                continue
+            score = abs((c * w) / (r * h) - 1)
+            if score < best[0]:
+                best = (score, r, c)
+        _, rows, cols = best
+    else:
+        rows = math.ceil(n / cols)
+
+    tw = cols * w + (cols - 1) * gap
+    th = rows * h + (rows - 1) * gap
+    shape = (th, tw, channels) if channels else (th, tw)
+    logger.warning(
+        f'{h=} {w=} {n=} {gap=} {rows=} {cols=} {tw=} {th=} {shape=}')
+    canvas = np.full(shape, bg, dtype=np.uint8)
+
+    total_cells = rows * cols
+    if total_cells > n:
+        pad_shape = (h, w, channels) if channels else (h, w)
+        pad_img = np.full(pad_shape, fg, dtype=np.uint8)
+        images = list(images) + [pad_img] * (total_cells - n)
+
+    for i, img in enumerate(images):
+        row = i // cols
+        col = i % cols
+        y = row * (h + gap)
+        x = col * (w + gap)
+        canvas[y:y+h, x:x+w] = img
+
+    return canvas
 
 
 def setup_logger(

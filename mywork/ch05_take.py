@@ -1,5 +1,3 @@
-
-
 import math
 from functools import lru_cache
 import cv2
@@ -12,6 +10,10 @@ from common import *
 TASK_NAME = Path(__file__).stem
 LAYOUT_DIR = Path('cache/layout')
 LAYOUT_DIR.mkdir(parents=True, exist_ok=True)
+INFO_LABELS = ["title", "library", "author"]
+DATA_LABELS = ["rank", "last", "total", "view", "comment",
+                "mylist", "mylist_rate","comment_rate", "date", "id"]
+
 
 
 def pallette_names(hsv_list):
@@ -39,7 +41,6 @@ def pallette_names(hsv_list):
         # 7. 剩余小段（26-35 黄色调）归为橙色
         else:
             names.append('orange')
-
     return names
 
 
@@ -50,78 +51,65 @@ def get_boxes_by_theme(theme, w, h):
     return get_boxes(theme, w, h)
 
 
-def padding(img, px, py, bg):
-    return cv2.copyMakeBorder(
-        img,
-        px, px, py, py,
-        cv2.BORDER_CONSTANT,
-        value=bg
-    )
-
-
-def normalize_size(images, bg):
-    h = max(x.shape[0] for x in images)
-    w = max(x.shape[1] for x in images)
-
-    result = []
-
-    for img in images:
-        ih, iw = img.shape[:2]
-
-        canvas = np.full(
-            (h, w),
-            bg,
-            dtype=img.dtype
-        )
-
-        canvas[:ih, :iw] = img
-        result.append(canvas)
-
-    return result
-
-# 新增一个机制 当网格填不满时， 用fg参数生成 h*w 的格子填充
-
-
-def grid_layout(images, bg, fg, gap=0, cols=0):
-    n = len(images)
-    h, w = images[0].shape[:2]
-    channels = images[0].shape[2] if images[0].ndim == 3 else 0
-
-    if cols == 0:
-        best = (math.inf, 0, 0)
-        for c in range(1, n + 1):
-            r = math.ceil(n / c)
-            last = n % c
-            if last != 0 and last < c * 0.5:
-                continue
-            score = abs((c * w) / (r * h) - 1)
-            if score < best[0]:
-                best = (score, r, c)
-        _, rows, cols = best
-    else:
-        rows = math.ceil(n / cols)
-
-    tw = cols * w + (cols - 1) * gap
-    th = rows * h + (rows - 1) * gap
-    shape = (th, tw, channels) if channels else (th, tw)
-    logger.warning(
-        f'{h=} {w=} {n=} {gap=} {rows=} {cols=} {tw=} {th=} {shape=}')
-    canvas = np.full(shape, bg, dtype=np.uint8)
-
-    total_cells = rows * cols
-    if total_cells > n:
-        pad_shape = (h, w, channels) if channels else (h, w)
-        pad_img = np.full(pad_shape, fg, dtype=np.uint8)
-        images = list(images) + [pad_img] * (total_cells - n)
-
-    for i, img in enumerate(images):
-        row = i // cols
-        col = i % cols
-        y = row * (h + gap)
-        x = col * (w + gap)
-        canvas[y:y+h, x:x+w] = img
-
-    return canvas
+def rander_table(images: list[list[np.ndarray | None]], bs, bc, px, py, pc):
+    rows = len(images)
+    cols = len(images[0])
+    col_widths = [0] * cols
+    row_heights = [0] * rows
+    for r in range(rows):
+        for c in range(cols):
+            img = images[r][c]
+            if img is not None:
+                h, w = img.shape[:2]
+                if w > col_widths[c]:
+                    col_widths[c] = w
+                if h > row_heights[r]:
+                    row_heights[r] = h
+    canvas_w = sum(col_widths) + (cols + 1) * bs + 2 * px
+    canvas_h = sum(row_heights) + (rows + 1) * bs + 2 * py
+    shape = hasattr(pc, '__iter__') and (
+        canvas_h, canvas_w, len(pc)) or (canvas_h, canvas_w)
+    canvas = np.full(shape, pc, dtype=np.uint8)
+    if bs > 0:
+        y = py
+        for i in range(rows + 1):
+            cv2.rectangle(canvas, (px, y), (canvas_w -
+                          px - 1, y + bs - 1), bc, -1)
+            if i < rows:
+                y += bs + row_heights[i]
+        x = px
+        for i in range(cols + 1):
+            cv2.rectangle(canvas, (x, py), (x + bs - 1,
+                          canvas_h - py - 1), bc, -1)
+            if i < cols:
+                x += bs + col_widths[i]
+    coords_map = []
+    y = bs + py
+    for r in range(rows):
+        x = bs + px
+        row_coords = []
+        for c in range(cols):
+            img = images[r][c]
+            if img is not None:
+                h, w = img.shape[:2]
+                x_offset = 0
+                y_offset = (row_heights[r] - h) // 2
+                pos_x = x + x_offset
+                pos_y = y + y_offset
+                canvas[pos_y:pos_y+h, pos_x:pos_x+w] = img
+                row_coords.append(
+                    {'x1': pos_x, 'y1': pos_y, 'x2': pos_x + w, 'y2': pos_y + h})
+            else:
+                pos_x = x
+                pos_y = y
+                end_x = pos_x + col_widths[c]
+                end_y = pos_y + row_heights[r]
+                row_coords.append(
+                    {'x1': pos_x, 'y1': pos_y, 'x2': end_x, 'y2': end_y})
+            x += bs + col_widths[c]
+        y += bs + row_heights[r]
+        coords_map.append(row_coords)
+    return canvas, coords_map
 
 
 def take(p, t):
@@ -129,7 +117,12 @@ def take(p, t):
     h, w = im.shape[:2]
     m = {}
     for label, box in get_boxes_by_theme(t, w, h).items():
-        m[label] = crop(im, box)
+        if label in INFO_LABELS:
+            m[label] = np.rot90(crop(im, box))
+        elif label in DATA_LABELS:
+            m[label] = crop(im, box)
+        if label.endswith('rate'):
+            m[label] = padding(m[label], 2, 2, 255)
     return m
 
 
@@ -138,27 +131,59 @@ def run(param: tuple[list[list[Path]], list[list]], ctx: Context):
     themes = pallette_names(pallette_hsv)
     logger.info("%s start: input %d groups.", TASK_NAME, len(groups))
     logger.info("pallette: %s", pallette_hsv)
-
-    labelimgs = defaultdict(list)
-    labelthemes = defaultdict(list)
+    rows_data = []
+    themes_for_rows = []
     for g, t in zip(groups, themes):
         logger.info('theme: %s, len: %d', t, len(g))
         if t == 'orange':
-            g = g[1:]
+            g = g[1:]  # 丢弃orange的第一张
         for p in g:
             m = take(p, t)
-            for label in m:
-                labelimgs[label].append(m[label])
-                labelthemes[label].append(t)
-
-    labelpaths = {}
-    for label in labelimgs:
-        imgs = normalize_size(labelimgs[label], 255)
-        layout = grid_layout(imgs, 0, 255, 2)
-        lp = LAYOUT_DIR/f'{label}.png'
-        cv2.imwrite(lp, layout)
-        labelpaths[label] = lp
-
-    store.json(LAYOUT_DIR/'theme-track.json', dict(labelthemes))
-    logger.info("%s done: output %d images.", TASK_NAME, len(labelpaths))
-    return labelpaths, labelthemes
+            rows_data.append(m)
+            themes_for_rows.append(t)
+    info_images = []
+    data_images = []
+    for m in rows_data:
+        title_img = m.get('title')
+        h_title = title_img.shape[0] if title_img is not None else 0
+        info_row = []
+        data_row = []
+        for label in INFO_LABELS:
+            img = m.get(label)
+            if img is not None and h_title > 0:
+                h, w = img.shape[:2]
+                if h != h_title:
+                    new_w = int(w * h_title / h)
+                    img = cv2.resize(img, (new_w, h_title))
+            info_row.append(img)
+        for label in DATA_LABELS:
+            img = m.get(label)
+            if img is not None and h_title > 0:
+                h, w = img.shape[:2]
+                if h != h_title:
+                    new_w = int(w * h_title / h)
+                    img = cv2.resize(img, (new_w, h_title))
+            data_row.append(img)
+        info_images.append(info_row)
+        data_images.append(data_row)
+    bs = 1
+    bc = 22
+    px = 12
+    py = 12
+    pc = 255
+    info_canvas, info_coords_map = rander_table(
+        info_images, bs, bc, px, py, pc)
+    cv2.imwrite(LAYOUT_DIR/'info.png', info_canvas)
+    info_theme_track = [[themes_for_rows[r] if info_images[r][c] is not None else None for c in range(
+        len(INFO_LABELS))] for r in range(len(info_images))]
+    store.json(LAYOUT_DIR/'info-theme-track.json', info_theme_track)
+    store.json(LAYOUT_DIR/'info-pos-track.json', info_coords_map)
+    data_canvas, data_coords_map = rander_table(
+        data_images, bs, bc, px, py, pc)
+    cv2.imwrite(LAYOUT_DIR/'data.png', data_canvas)
+    data_theme_track = [[themes_for_rows[r] if data_images[r][c] is not None else None for c in range(
+        len(DATA_LABELS))] for r in range(len(data_images))]
+    store.json(LAYOUT_DIR/'data-theme-track.json', data_theme_track)
+    store.json(LAYOUT_DIR/'data-pos-track.json', data_coords_map)
+    logger.info("%s done.", TASK_NAME)
+    return
