@@ -102,7 +102,7 @@ def find_best_plateau(data, window_size=5, extend=False):
     """
     n = len(data)
     if n < window_size:
-        return None
+        window_size = n
     # 1. 计算滑动窗口方差
     sw = sliding_window_view(data, window_size)
     variances = np.var(sw, axis=1, ddof=1)
@@ -152,7 +152,6 @@ def run(image_paths: list[Path], ctx: Context):
         best_indexs.append(pi)
         logger.debug('best_plateau: %d -> %d -> %s', i, pi, image_paths[pi])
 
-    # clus = cluster(image_paths, mask)
     store.stats(TASK_NAME, stats, ids, CLOUMNS)
     store.clusters(TASK_NAME, names, slices, best_indexs)
     logger.info(f"%s done:  output %d frames.", TASK_NAME, len(best_indexs))

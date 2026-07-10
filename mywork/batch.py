@@ -172,6 +172,9 @@ def hot(tid):
 def pre_run(tid):
     logger.info('创建目录 %s', FRAME_DIR)
     FRAME_DIR.mkdir(parents=True, exist_ok=True)
+    logger.info('创建目录 %s', OCR_READY)
+    OCR_READY.mkdir(parents=True, exist_ok=True)
+    
     return
 
 
